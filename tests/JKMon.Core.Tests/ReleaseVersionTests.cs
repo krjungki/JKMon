@@ -24,6 +24,36 @@ public class ReleaseVersionTests
         Assert.Equal("1.2.3-beta.1", version.ToString());
     }
 
+    [Fact]
+    public void TryParse_DiscardsBuildMetadata()
+    {
+        Assert.True(ReleaseVersion.TryParse("0.2.1+ad379f8e56557b3567c8dbafb89b3439e512b203", out var version));
+
+        Assert.Equal(string.Empty, version.Suffix);
+        Assert.Equal("0.2.1", version.ToString());
+    }
+
+    [Fact]
+    public void ABuildStampedWithItsCommitIsNotOlderThanTheRelease()
+    {
+        // The SDK appends the commit hash, which used to make an installed build ask to update to itself.
+        Assert.True(ReleaseVersion.TryParse("0.2.1+ad379f8e", out var installed));
+        Assert.True(ReleaseVersion.TryParse("0.2.1", out var published));
+
+        Assert.False(installed < published);
+        Assert.Equal(installed, published);
+    }
+
+    [Fact]
+    public void PrereleaseMetadataStillOrdersBeforeTheRelease()
+    {
+        Assert.True(ReleaseVersion.TryParse("1.0.0-rc.1+abc123", out var candidate));
+        Assert.True(ReleaseVersion.TryParse("1.0.0", out var release));
+
+        Assert.Equal("rc.1", candidate.Suffix);
+        Assert.True(candidate < release);
+    }
+
     [Theory]
     [InlineData(null)]
     [InlineData("")]

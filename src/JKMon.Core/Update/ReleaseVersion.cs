@@ -12,7 +12,11 @@ public readonly record struct ReleaseVersion(int Major, int Minor, int Patch, st
 {
     public static ReleaseVersion Zero => new(0, 0, 0, string.Empty);
 
-    /// <summary>Accepts `1.2.3`, `v1.2.3` and `1.2.3-beta.1`. Anything else is not a version.</summary>
+    /// <summary>
+    /// Accepts `1.2.3`, `v1.2.3` and `1.2.3-beta.1`. Build metadata after `+` is discarded: SemVer excludes it from
+    /// precedence, and the SDK appends the commit hash there, which would otherwise make a build look older than the
+    /// release it was cut from.
+    /// </summary>
     public static bool TryParse(string? text, out ReleaseVersion version)
     {
         version = Zero;
@@ -27,8 +31,14 @@ public readonly record struct ReleaseVersion(int Major, int Minor, int Patch, st
             span = span[1..];
         }
 
+        var plus = span.IndexOf('+');
+        if (plus >= 0)
+        {
+            span = span[..plus];
+        }
+
         var suffix = string.Empty;
-        var dash = span.IndexOfAny(['-', '+']);
+        var dash = span.IndexOf('-');
         if (dash >= 0)
         {
             suffix = span[(dash + 1)..];
