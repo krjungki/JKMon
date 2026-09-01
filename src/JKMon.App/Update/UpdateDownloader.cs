@@ -15,6 +15,7 @@ internal sealed record StagedUpdate(ReleaseVersion Version, string StagedDirecto
 internal sealed class UpdateDownloader
 {
     private const string StagedFolderName = "staged";
+    private const string WorkPrefix = StagingPaths.Prefix;
 
     private readonly HttpClient _http;
 
@@ -36,6 +37,48 @@ internal sealed class UpdateDownloader
         }
 
         TryDelete(directory!);
+    }
+
+    /// <summary>
+    /// Runs in the background because the applier is still executing from the staging folder when the new build
+    /// starts, so the first delete attempts fail.
+    /// </summary>
+    internal static void ScheduleCleanup(string? directory) => Task.Run(async () =>
+    {
+        if (IsStagingRoot(directory))
+        {
+            for (var attempt = 0; attempt < 15 && Directory.Exists(directory!); attempt++)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
+                TryDeleteStagingRoot(directory);
+            }
+        }
+
+        SweepStaleLeftovers();
+    });
+
+    /// <summary>
+    /// Only folders left untouched for an hour are swept. A younger one may belong to an update that is running
+    /// right now, and deleting it would break that update.
+    /// </summary>
+    private static void SweepStaleLeftovers()
+    {
+        var cutoff = DateTime.UtcNow - TimeSpan.FromHours(1);
+
+        try
+        {
+            foreach (var stale in Directory.GetDirectories(Path.GetTempPath(), $"{WorkPrefix}*"))
+            {
+                if (Directory.GetLastWriteTimeUtc(stale) < cutoff)
+                {
+                    TryDelete(stale);
+                }
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // A leftover that cannot be listed is left for a later run.
+        }
     }
 
     internal async Task<StagedUpdate?> TryStageAsync(UpdateInfo info, CancellationToken cancellationToken)

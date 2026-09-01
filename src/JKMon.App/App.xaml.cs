@@ -35,10 +35,8 @@ public partial class App : System.Windows.Application
             return;
         }
 
-        if (arguments.CleanupDirectory is { Length: > 0 } leftover)
-        {
-            UpdateDownloader.TryDeleteStagingRoot(leftover);
-        }
+        // Leftovers from an earlier update are swept even when this start is not the one that followed a swap.
+        UpdateDownloader.ScheduleCleanup(arguments.CleanupDirectory);
 
         _store = new SettingsStore();
         _settings = _store.Load();
