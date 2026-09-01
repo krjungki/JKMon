@@ -47,6 +47,7 @@ internal sealed class TrayController : IDisposable
         menu.Items.Add(_visibilityItem);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(new ToolStripMenuItem("Settings...", null, (_, _) => SettingsRequested?.Invoke()));
+        menu.Items.Add(new ToolStripMenuItem("Check for updates...", null, (_, _) => UpdateCheckRequested?.Invoke()));
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(_desktopLayerItem);
         menu.Items.Add(_topLayerItem);
@@ -72,6 +73,8 @@ internal sealed class TrayController : IDisposable
     internal event Action? VisibilityToggled;
 
     internal event Action? SettingsRequested;
+
+    internal event Action? UpdateCheckRequested;
 
     internal event Action? ExitRequested;
 

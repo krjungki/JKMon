@@ -446,6 +446,21 @@
 
                     <CheckBox x:Name="StartupCheck" Content="Start with Windows" Margin="110,10,0,0" />
 
+                    <Grid Margin="0,10,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="110" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Update check" />
+                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                            <RadioButton x:Name="UpdateNeverRadio" Content="Never" GroupName="UpdateCheck" />
+                            <RadioButton x:Name="UpdateDailyRadio" Content="Daily" GroupName="UpdateCheck" />
+                            <RadioButton x:Name="UpdateWeeklyRadio" Content="Weekly" GroupName="UpdateCheck" />
+                        </StackPanel>
+                    </Grid>
+
+                    <CheckBox x:Name="UpdateStartupCheck" Content="Also check when the app starts" Margin="110,0,0,0" />
+
                     <TextBlock x:Name="DataRootText"
                                Margin="110,6,0,0"
                                Foreground="#FF8FA3BF"

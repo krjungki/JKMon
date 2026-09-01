@@ -1,5 +1,6 @@
 ﻿using System.Windows;
 using System.Windows.Threading;
+using JKMon.App.Update;
 using JKMon.Core;
 using JKMon.Core.Metrics;
 using JKMon.Core.Settings;
@@ -19,11 +20,25 @@ public partial class App : System.Windows.Application
     private SettingsStore? _store;
     private JkMonSettings _settings = new();
     private bool _refreshing;
+    private bool _updating;
 
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
+
+        var arguments = UpdateArguments.Parse(e.Args);
+        if (arguments.IsApply)
+        {
+            // This instance is the staged build swapping files for the installed one; it shows no interface.
+            Environment.Exit(UpdateApplier.Run(arguments));
+            return;
+        }
+
+        if (arguments.CleanupDirectory is { Length: > 0 } leftover)
+        {
+            UpdateDownloader.TryDeleteStagingRoot(leftover);
+        }
 
         _store = new SettingsStore();
         _settings = _store.Load();
@@ -49,6 +64,7 @@ public partial class App : System.Windows.Application
         _tray.RefreshIntervalChanged += seconds => UpdateSettings(_settings with { RefreshSeconds = seconds });
         _tray.VisibilityToggled += ToggleOverlay;
         _tray.SettingsRequested += ShowSettings;
+        _tray.UpdateCheckRequested += () => _ = CheckForUpdatesAsync(manual: true);
         _tray.ExitRequested += Shutdown;
         _tray.Sync(_settings, overlayVisible: true);
 
@@ -57,6 +73,49 @@ public partial class App : System.Windows.Application
         _timer.Start();
 
         _ = RefreshAsync();
+
+        if (UpdateService.IsDue(_settings, atStartup: true))
+        {
+            _ = CheckForUpdatesAsync(manual: false);
+        }
+    }
+
+    /// <summary>A manual check always reports its result; a scheduled one stays silent unless an update exists.</summary>
+    private async Task CheckForUpdatesAsync(bool manual)
+    {
+        if (_updating)
+        {
+            return;
+        }
+
+        if (!manual && !UpdateService.IsDue(_settings, atStartup: false))
+        {
+            return;
+        }
+
+        _updating = true;
+        try
+        {
+            using var service = new UpdateService();
+            using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(15));
+
+            var outcome = await service.RunAsync(announceWhenCurrent: manual, timeout.Token);
+            UpdateSettings(_settings with { LastUpdateCheckUtc = DateTimeOffset.UtcNow });
+
+            if (outcome == UpdateOutcome.Applying)
+            {
+                // The applier is waiting for this process to exit before it replaces the files.
+                Shutdown();
+            }
+        }
+        catch (Exception ex)
+        {
+            DiagnosticLog.Write($"update check failed: {ex}");
+        }
+        finally
+        {
+            _updating = false;
+        }
     }
 
     private async Task RefreshAsync()
@@ -73,6 +132,11 @@ public partial class App : System.Windows.Application
             var model = await _engine.RefreshAsync();
             _overlay.Update(model);
             _tray?.ShowStatus(model);
+
+            if (UpdateService.IsDue(_settings, atStartup: false))
+            {
+                _ = CheckForUpdatesAsync(manual: false);
+            }
         }
         catch (Exception ex)
         {

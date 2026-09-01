@@ -6,6 +6,7 @@ using JKMon.App.Interop;
 using JKMon.Core.Presentation;
 using JKMon.Core.Settings;
 using JKMon.Core.Sync;
+using JKMon.Core.Update;
 
 // File-level aliases beat the WinForms and GDI+ imports that UseWindowsForms brings in.
 using Button = System.Windows.Controls.Button;
@@ -23,6 +24,8 @@ public partial class SettingsWindow : Window
     private readonly List<string> _providerOrder = [];
 
     private int[] _customColors = [];
+
+    private DateTimeOffset _lastUpdateCheckUtc;
 
     private bool _loading;
 
@@ -114,6 +117,11 @@ public partial class SettingsWindow : Window
         MonitorBox.SelectionChanged += (_, _) => Publish();
         StartupCheck.Checked += (_, _) => Publish();
         StartupCheck.Unchecked += (_, _) => Publish();
+        UpdateNeverRadio.Checked += (_, _) => Publish();
+        UpdateDailyRadio.Checked += (_, _) => Publish();
+        UpdateWeeklyRadio.Checked += (_, _) => Publish();
+        UpdateStartupCheck.Checked += (_, _) => Publish();
+        UpdateStartupCheck.Unchecked += (_, _) => Publish();
 
         OrderUpButton.Click += (_, _) => MoveProvider(-1);
         OrderDownButton.Click += (_, _) => MoveProvider(1);
@@ -210,6 +218,11 @@ public partial class SettingsWindow : Window
             MonitorBox.SelectedIndex = monitorIndex >= 0 ? monitorIndex : 0;
 
             StartupCheck.IsChecked = normalized.StartWithWindows;
+            UpdateNeverRadio.IsChecked = normalized.UpdateCheck == UpdateCheckFrequency.Never;
+            UpdateDailyRadio.IsChecked = normalized.UpdateCheck == UpdateCheckFrequency.Daily;
+            UpdateWeeklyRadio.IsChecked = normalized.UpdateCheck == UpdateCheckFrequency.Weekly;
+            UpdateStartupCheck.IsChecked = normalized.CheckUpdatesOnStartup;
+            _lastUpdateCheckUtc = normalized.LastUpdateCheckUtc;
 
             _providerOrder.Clear();
             _providerOrder.AddRange(normalized.ProviderOrder);
@@ -276,7 +289,12 @@ public partial class SettingsWindow : Window
             ? _monitorDevices[MonitorBox.SelectedIndex]
             : string.Empty,
         StartWithWindows = StartupCheck.IsChecked == true,
-        ProviderOrder = _providerOrder.ToList()
+        ProviderOrder = _providerOrder.ToList(),
+        UpdateCheck = UpdateDailyRadio.IsChecked == true ? UpdateCheckFrequency.Daily
+            : UpdateWeeklyRadio.IsChecked == true ? UpdateCheckFrequency.Weekly
+            : UpdateCheckFrequency.Never,
+        CheckUpdatesOnStartup = UpdateStartupCheck.IsChecked == true,
+        LastUpdateCheckUtc = _lastUpdateCheckUtc
     }.Normalized();
 
     private void ShowProviderOrder(int selected)
@@ -303,6 +321,7 @@ public partial class SettingsWindow : Window
     private void UpdateReadouts()
     {
         DirectionColorRows.IsEnabled = DirectionColorCheck.IsChecked == true;
+        UpdateStartupCheck.IsEnabled = UpdateNeverRadio.IsChecked != true;
 
         // Per-core bars take the place of the aggregate gauge, so its style no longer applies.
         var aggregateCpu = CoresCheck.IsChecked != true;

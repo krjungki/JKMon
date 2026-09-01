@@ -1,6 +1,7 @@
 using System.Text.Json.Serialization;
 using JKMon.Core.Presentation;
 using JKMon.Core.Sync;
+using JKMon.Core.Update;
 
 namespace JKMon.Core.Settings;
 
@@ -139,6 +140,14 @@ public sealed record JkMonSettings
     /// <summary>Left-to-right order of the status circles. Providers missing from the list are appended.</summary>
     public IReadOnlyList<string> ProviderOrder { get; init; } = SyncProviderCatalog.DefaultOrder;
 
+    /// <summary>How often the app may contact GitHub on its own. `Never` disables every automatic check.</summary>
+    public UpdateCheckFrequency UpdateCheck { get; init; } = UpdateCheckFrequency.Never;
+
+    public bool CheckUpdatesOnStartup { get; init; }
+
+    /// <summary>Default means no check has run yet.</summary>
+    public DateTimeOffset LastUpdateCheckUtc { get; init; }
+
     [JsonIgnore]
     public bool HasCustomText => CustomText.Length > 0;
 
@@ -177,7 +186,8 @@ public sealed record JkMonSettings
         CustomTextFontSize = ClampDouble(CustomTextFontSize, MinCustomTextFontSize, MaxCustomTextFontSize, 16),
         CustomTextColor = ValidColor(CustomTextColor, DefaultCustomTextColor),
         CustomTextAlignment = Enum.IsDefined(CustomTextAlignment) ? CustomTextAlignment : CaptionAlignment.Center,
-        ProviderOrder = SyncProviderCatalog.Normalize(ProviderOrder)
+        ProviderOrder = SyncProviderCatalog.Normalize(ProviderOrder),
+        UpdateCheck = Enum.IsDefined(UpdateCheck) ? UpdateCheck : UpdateCheckFrequency.Never
     };
 
     /// <summary>Line breaks would silently change the overlay's height, so the caption is collapsed to one line.</summary>
