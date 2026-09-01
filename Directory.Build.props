@@ -1,0 +1,7 @@
+<Project>
+  <PropertyGroup>
+    <Version>0.1.0</Version>
+    <!-- Embedded symbols keep line numbers in stack traces without shipping .pdb files next to the executable. -->
+    <DebugType>embedded</DebugType>
+  </PropertyGroup>
+</Project>

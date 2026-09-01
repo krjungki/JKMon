@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/JKMon.App/JKMon.App.csproj" />
+    <Project Path="src/JKMon.Core/JKMon.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/JKMon.Core.Tests/JKMon.Core.Tests.csproj" />
+  </Folder>
+</Solution>

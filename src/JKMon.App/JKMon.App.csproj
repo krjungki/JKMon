@@ -1,0 +1,42 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <AssemblyName>JKMon</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- Background GC trades memory for pause time, which a always-resident monitor does not need. -->
+    <ConcurrentGarbageCollector>false</ConcurrentGarbageCollector>
+    <TieredCompilationQuickJitForLoops>true</TieredCompilationQuickJitForLoops>
+    <!-- WFO0003 targets WinForms startup; this is a WPF app that only borrows NotifyIcon, so DPI stays in the manifest. -->
+    <NoWarn>$(NoWarn);WFO0003</NoWarn>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <!-- Managed assemblies are bundled into the host so a portable copy is a handful of files instead of 250. -->
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>true</SelfContained>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <!-- Native libraries stay beside the executable: self-extracting them would unpack into TEMP on every new build. -->
+    <IncludeNativeLibrariesForSelfExtract>false</IncludeNativeLibrariesForSelfExtract>
+    <!-- Compression saves 85 MB on disk but costs 80 MB of private working set, which this resident monitor cannot afford. -->
+    <EnableCompressionInSingleFile>false</EnableCompressionInSingleFile>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\JKMon.Core\JKMon.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The self-contained build redistributes the .NET runtime, so its licence terms travel with the artifact. -->
+    <Content Include="..\..\LICENSE" CopyToPublishDirectory="PreserveNewest" Link="LICENSE" />
+    <Content Include="..\..\THIRD-PARTY-NOTICES.txt" CopyToPublishDirectory="PreserveNewest" Link="THIRD-PARTY-NOTICES.txt" />
+  </ItemGroup>
+
+</Project>
