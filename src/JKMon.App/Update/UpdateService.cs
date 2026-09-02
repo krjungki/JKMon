@@ -132,11 +132,11 @@ internal sealed class UpdateService : IDisposable
     private static void Say(string message, MessageBoxImage icon) =>
         MessageBox.Show(message, "JKMon 업데이트", MessageBoxButton.OK, icon);
 
-    internal static bool IsDue(JkMonSettings settings, bool atStartup) => UpdateSchedule.IsDue(
+    internal static bool IsDue(JkMonSettings settings, DateTimeOffset appStartedUtc) => UpdateSchedule.IsDue(
         settings.UpdateCheck,
         settings.LastUpdateCheckUtc,
+        appStartedUtc,
         DateTimeOffset.UtcNow,
-        atStartup,
         settings.CheckUpdatesOnStartup);
 
     public void Dispose() => _http.Dispose();

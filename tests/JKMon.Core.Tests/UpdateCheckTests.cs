@@ -9,24 +9,48 @@ public class UpdateCheckTests
 {
     private static readonly DateTimeOffset Now = new(2026, 9, 1, 12, 0, 0, TimeSpan.Zero);
 
+    /// <summary>A run that began a moment ago, which is the case the start-up switch is about.</summary>
+    private static readonly DateTimeOffset JustStarted = Now.AddSeconds(-3);
+
     [Fact]
     public void Schedule_NeverBlocksEveryAutomaticCheck()
     {
-        Assert.False(UpdateSchedule.IsDue(UpdateCheckFrequency.Never, default, Now, atStartup: true, checkAtStartup: true));
-        Assert.False(UpdateSchedule.IsDue(UpdateCheckFrequency.Never, default, Now, atStartup: false, checkAtStartup: true));
+        Assert.False(UpdateSchedule.IsDue(UpdateCheckFrequency.Never, default, JustStarted, Now, checkAtStartup: true));
+        Assert.False(UpdateSchedule.IsDue(UpdateCheckFrequency.Never, default, JustStarted, Now, checkAtStartup: false));
+    }
+
+    /// <summary>
+    /// The refresh loop used to ask with a different argument than the start-up path, so a launch triggered a check
+    /// seconds later even with the switch off. There is one decision now, and this pins it.
+    /// </summary>
+    [Fact]
+    public void Schedule_LaunchingDoesNotCheckWhenTheStartupSwitchIsOff()
+    {
+        var longAgo = Now.AddDays(-30);
+
+        Assert.False(UpdateSchedule.IsDue(UpdateCheckFrequency.Daily, longAgo, JustStarted, Now, checkAtStartup: false));
+        Assert.True(UpdateSchedule.IsDue(UpdateCheckFrequency.Daily, longAgo, JustStarted, Now, checkAtStartup: true));
     }
 
     [Fact]
-    public void Schedule_StartupCheckObeysItsOwnSwitch()
+    public void Schedule_WithTheSwitchOffItChecksAfterAFullIntervalOfRunning()
     {
-        Assert.False(UpdateSchedule.IsDue(UpdateCheckFrequency.Daily, default, Now, atStartup: true, checkAtStartup: false));
-        Assert.True(UpdateSchedule.IsDue(UpdateCheckFrequency.Daily, default, Now, atStartup: true, checkAtStartup: true));
+        var started = Now.AddHours(-25);
+        var lastCheck = Now.AddDays(-30);
+
+        Assert.True(UpdateSchedule.IsDue(UpdateCheckFrequency.Daily, lastCheck, started, Now, checkAtStartup: false));
     }
 
     [Fact]
-    public void Schedule_FirstCheckIsAlwaysDue()
+    public void Schedule_WithTheSwitchOffAFreshInstallStillWaits()
     {
-        Assert.True(UpdateSchedule.IsDue(UpdateCheckFrequency.Weekly, default, Now, atStartup: false, checkAtStartup: false));
+        Assert.False(UpdateSchedule.IsDue(UpdateCheckFrequency.Weekly, default, JustStarted, Now, checkAtStartup: false));
+    }
+
+    [Fact]
+    public void Schedule_FirstCheckIsDueAtStartupWhenTheSwitchIsOn()
+    {
+        Assert.True(UpdateSchedule.IsDue(UpdateCheckFrequency.Weekly, default, JustStarted, Now, checkAtStartup: true));
     }
 
     [Theory]
@@ -37,16 +61,26 @@ public class UpdateCheckTests
     public void Schedule_WaitsForTheInterval(UpdateCheckFrequency frequency, int hoursSince, bool expected)
     {
         var last = Now.AddHours(-hoursSince);
+        var started = Now.AddDays(-60);
 
-        Assert.Equal(expected, UpdateSchedule.IsDue(frequency, last, Now, atStartup: false, checkAtStartup: false));
+        Assert.Equal(expected, UpdateSchedule.IsDue(frequency, last, started, Now, checkAtStartup: false));
+        Assert.Equal(expected, UpdateSchedule.IsDue(frequency, last, started, Now, checkAtStartup: true));
     }
 
     [Fact]
     public void Schedule_RecoversFromAClockThatMovedBackwards()
     {
         var last = Now.AddDays(5);
+        var started = Now.AddDays(-60);
 
-        Assert.True(UpdateSchedule.IsDue(UpdateCheckFrequency.Daily, last, Now, atStartup: false, checkAtStartup: false));
+        Assert.True(UpdateSchedule.IsDue(UpdateCheckFrequency.Daily, last, started, Now, checkAtStartup: false));
+    }
+
+    [Fact]
+    public void Schedule_FailureBackoffIsShorterThanEveryInterval()
+    {
+        Assert.True(UpdateSchedule.RetryAfterFailure < UpdateSchedule.IntervalOf(UpdateCheckFrequency.Daily));
+        Assert.True(UpdateSchedule.RetryAfterFailure > TimeSpan.Zero);
     }
 
     [Fact]

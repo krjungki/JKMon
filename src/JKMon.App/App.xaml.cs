@@ -6,6 +6,7 @@ using JKMon.Core;
 using JKMon.Core.Metrics;
 using JKMon.Core.Settings;
 using JKMon.Core.Sync;
+using JKMon.Core.Update;
 
 namespace JKMon.App;
 
@@ -24,6 +25,12 @@ public partial class App : System.Windows.Application
     private JkMonSettings _settings = new();
     private bool _refreshing;
     private bool _updating;
+
+    /// <summary>When this run began, which is what keeps a launch from bypassing the start-up preference.</summary>
+    private readonly DateTimeOffset _startedUtc = DateTimeOffset.UtcNow;
+
+    /// <summary>Not persisted: a restart is a deliberate act and may retry immediately.</summary>
+    private DateTimeOffset _retryNotBefore = DateTimeOffset.MinValue;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -82,7 +89,7 @@ public partial class App : System.Windows.Application
 
         _ = RefreshAsync();
 
-        if (UpdateService.IsDue(_settings, atStartup: true))
+        if (UpdateService.IsDue(_settings, _startedUtc))
         {
             _ = CheckForUpdatesAsync(manual: false);
         }
@@ -96,7 +103,7 @@ public partial class App : System.Windows.Application
             return;
         }
 
-        if (!manual && !UpdateService.IsDue(_settings, atStartup: false))
+        if (!manual && (DateTimeOffset.UtcNow < _retryNotBefore || !UpdateService.IsDue(_settings, _startedUtc)))
         {
             return;
         }
@@ -108,7 +115,19 @@ public partial class App : System.Windows.Application
             using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(15));
 
             var outcome = await service.RunAsync(announceWhenCurrent: manual, timeout.Token);
-            UpdateSettings(_settings with { LastUpdateCheckUtc = DateTimeOffset.UtcNow });
+
+            // Recording a failure as a completed check would postpone the next one by a whole interval, so a single
+            // network blip could hide an update for a day. Failures back off in memory instead.
+            if (outcome == UpdateOutcome.CheckFailed)
+            {
+                _retryNotBefore = DateTimeOffset.UtcNow + UpdateSchedule.RetryAfterFailure;
+                DiagnosticLog.Write($"update: check failed, next attempt no earlier than {_retryNotBefore:O}");
+            }
+            else
+            {
+                _retryNotBefore = DateTimeOffset.MinValue;
+                UpdateSettings(_settings with { LastUpdateCheckUtc = DateTimeOffset.UtcNow });
+            }
 
             if (outcome == UpdateOutcome.Applying)
             {
@@ -143,7 +162,7 @@ public partial class App : System.Windows.Application
             _presentProviders = [.. model.Circles.Select(circle => circle.ProviderId)];
             _settingsWindow?.SetPresentProviders(_presentProviders);
 
-            if (UpdateService.IsDue(_settings, atStartup: false))
+            if (UpdateService.IsDue(_settings, _startedUtc))
             {
                 _ = CheckForUpdatesAsync(manual: false);
             }
