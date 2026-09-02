@@ -146,6 +146,9 @@ public sealed record JkMonSettings
 
     public CaptionAlignment CustomTextAlignment { get; init; } = CaptionAlignment.Center;
 
+    /// <summary>The caption sits outside the panel background, so it carries its own shadow setting.</summary>
+    public bool CustomTextShadow { get; init; } = true;
+
     /// <summary>Left-to-right order of the status circles. Providers missing from the list are appended.</summary>
     public IReadOnlyList<string> ProviderOrder { get; init; } = SyncProviderCatalog.DefaultOrder;
 

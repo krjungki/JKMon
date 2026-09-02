@@ -149,6 +149,11 @@
                         </StackPanel>
                     </Grid>
 
+                    <CheckBox x:Name="CaptionShadowCheck"
+                              Content="Caption shadow"
+                              ToolTip="캡션은 배경 밖에 있으므로 바탕화면 위에서 읽히려면 그림자가 필요하다"
+                              Margin="110,0,0,8" />
+
                     <TextBlock Text="APPEARANCE" Style="{StaticResource Heading}" />
 
                     <Grid Margin="0,0,0,8">

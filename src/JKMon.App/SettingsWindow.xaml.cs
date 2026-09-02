@@ -112,6 +112,8 @@ public partial class SettingsWindow : Window
         BoldCheck.Unchecked += (_, _) => Publish();
         ShadowCheck.Checked += (_, _) => Publish();
         ShadowCheck.Unchecked += (_, _) => Publish();
+        CaptionShadowCheck.Checked += (_, _) => Publish();
+        CaptionShadowCheck.Unchecked += (_, _) => Publish();
         RefreshSlider.ValueChanged += (_, _) => Publish();
         MarginSlider.ValueChanged += (_, _) => Publish();
         DesktopRadio.Checked += (_, _) => Publish();
@@ -189,6 +191,7 @@ public partial class SettingsWindow : Window
             CaptionLeftRadio.IsChecked = normalized.CustomTextAlignment == CaptionAlignment.Left;
             CaptionCenterRadio.IsChecked = normalized.CustomTextAlignment == CaptionAlignment.Center;
             CaptionRightRadio.IsChecked = normalized.CustomTextAlignment == CaptionAlignment.Right;
+            CaptionShadowCheck.IsChecked = normalized.CustomTextShadow;
             TextColorBox.Text = normalized.TextColor;
             BackColorBox.Text = normalized.BackgroundColor;
             NetInColorBox.Text = normalized.NetworkInColor;
@@ -289,6 +292,7 @@ public partial class SettingsWindow : Window
         CircleDiameter = (int)Math.Round(CircleSlider.Value),
         BoldText = BoldCheck.IsChecked == true,
         TextShadow = ShadowCheck.IsChecked == true,
+        CustomTextShadow = CaptionShadowCheck.IsChecked == true,
         RefreshSeconds = (int)Math.Round(RefreshSlider.Value),
         MarginPixels = (int)Math.Round(MarginSlider.Value),
         Layer = TopRadio.IsChecked == true ? WindowLayer.AlwaysOnTop : WindowLayer.Desktop,

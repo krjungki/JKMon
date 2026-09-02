@@ -14,17 +14,22 @@
         UseLayoutRounding="True"
         TextOptions.TextFormattingMode="Display">
 
-    <Border x:Name="Panel"
-            CornerRadius="8"
-            Padding="12,7"
-            HorizontalAlignment="Left"
-            VerticalAlignment="Top">
-        <StackPanel Orientation="Vertical">
+    <!-- The caption sits outside the Border so the background never extends up behind it. -->
+    <StackPanel x:Name="Shell"
+                Orientation="Vertical"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Top">
 
-            <TextBlock x:Name="CustomTextBlock"
-                       Visibility="Collapsed"
-                       HorizontalAlignment="Center"
-                       TextWrapping="NoWrap" />
+        <TextBlock x:Name="CustomTextBlock"
+                   Visibility="Collapsed"
+                   HorizontalAlignment="Center"
+                   TextWrapping="NoWrap" />
+
+        <Border x:Name="Panel"
+                CornerRadius="8"
+                Padding="12,7"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Top">
 
             <StackPanel x:Name="Root" Orientation="Horizontal">
 
@@ -62,6 +67,6 @@
                         Margin="16,0,0,0"
                         VerticalAlignment="Center" />
             </StackPanel>
-        </StackPanel>
-    </Border>
+        </Border>
+    </StackPanel>
 </Window>

@@ -57,7 +57,9 @@ internal sealed class NumberGauge : IGauge
             Foreground = chrome.Fill,
             Effect = chrome.Shadow,
             Width = width,
-            TextAlignment = TextAlignment.Right,
+            // Left aligned so the digits start at a fixed x that a caption above can line up with. Right alignment
+            // would move the first digit whenever the value changed width.
+            TextAlignment = TextAlignment.Left,
             TextWrapping = TextWrapping.NoWrap,
             VerticalAlignment = VerticalAlignment.Center
         };
@@ -236,13 +238,13 @@ internal sealed class CaptionedGauge : IGauge
             FontSize = fontSize,
             Foreground = chrome.Fill,
             Effect = chrome.Shadow,
-            TextAlignment = TextAlignment.Center,
-            HorizontalAlignment = HorizontalAlignment.Center,
+            TextAlignment = TextAlignment.Left,
+            HorizontalAlignment = HorizontalAlignment.Left,
             TextWrapping = TextWrapping.NoWrap
         };
 
-        // The number carries a fixed width, so it has to be centred or a wider caption would leave it off to one side.
-        inner.Element.HorizontalAlignment = HorizontalAlignment.Center;
+        // Both edges start at the same x, which is the only way the caption tracks the value below it.
+        inner.Element.HorizontalAlignment = HorizontalAlignment.Left;
 
         _host = new StackPanel { Orientation = Orientation.Vertical };
         _host.Children.Add(text);

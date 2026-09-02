@@ -29,6 +29,9 @@ public partial class OverlayWindow : Window
     private static readonly string[] RateWidthSamples =
         ["1023 B/s", "9.9 KiB/s", "1023 KiB/s", "1023 MiB/s", "1023 GiB/s", "1023 TiB/s"];
 
+    /// <summary>Horizontal half of the Border padding declared in XAML.</summary>
+    private const double PanelPadding = 12;
+
     private JkMonSettings _settings = new();
     private IReadOnlyList<SyncCircle> _lastCircles = [];
     private IGauge? _cpuGauge;
@@ -90,7 +93,7 @@ public partial class OverlayWindow : Window
 
         ApplyColumnWidths(family, weight);
         RebuildGauges(family, shadow);
-        ApplyCustomText(shadow);
+        ApplyCustomText();
 
         // Column spacing tracks the font so the layout stays balanced at any size.
         var gap = Math.Round(_settings.FontSize * 0.85);
@@ -114,7 +117,7 @@ public partial class OverlayWindow : Window
         if (!_settings.HideWhenPointerOver)
         {
             _pointerWatch?.Stop();
-            Panel.Opacity = 1;
+            Shell.Opacity = 1;
             return;
         }
 
@@ -144,7 +147,7 @@ public partial class OverlayWindow : Window
         var conceal = HoverGate.ShouldConceal(_settings.HideWhenPointerOver, bounds, cursor.Value.X, cursor.Value.Y);
 
         // Opacity rather than visibility: a collapsed panel would shrink the window and let the pointer fall outside.
-        Panel.Opacity = conceal ? 0 : 1;
+        Shell.Opacity = conceal ? 0 : 1;
     }
 
     public void Update(OverlayModel model)
@@ -207,7 +210,7 @@ public partial class OverlayWindow : Window
     }
 
     /// <summary>The caption row is optional, so an empty setting collapses it rather than leaving blank padding.</summary>
-    private void ApplyCustomText(Effect? shadow)
+    private void ApplyCustomText()
     {
         if (!_settings.HasCustomText)
         {
@@ -221,8 +224,22 @@ public partial class OverlayWindow : Window
         CustomTextBlock.FontSize = _settings.CustomTextFontSize;
         CustomTextBlock.FontWeight = _settings.BoldText ? FontWeights.SemiBold : FontWeights.Normal;
         CustomTextBlock.Foreground = BrushFor(_settings.CustomTextColor, JkMonSettings.DefaultCustomTextColor);
-        CustomTextBlock.Effect = shadow;
-        CustomTextBlock.Margin = new Thickness(0, 0, 0, Math.Round(_settings.CustomTextFontSize * 0.3));
+
+        // Sitting over bare wallpaper rather than the panel, the caption needs a stronger shadow than the readings.
+        CustomTextBlock.Effect = _settings.CustomTextShadow
+            ? Frozen(new DropShadowEffect
+            {
+                Color = Colors.Black,
+                BlurRadius = Math.Max(4d, _settings.CustomTextFontSize * 0.35),
+                ShadowDepth = Math.Max(1d, _settings.CustomTextFontSize * 0.08),
+                Opacity = 0.9
+            })
+            : null;
+
+        // Matches the panel's horizontal padding so a left or right aligned caption lines up with the readings.
+        CustomTextBlock.Margin = new Thickness(
+            PanelPadding, 0, PanelPadding, Math.Round(_settings.CustomTextFontSize * 0.2));
+
         CustomTextBlock.HorizontalAlignment = _settings.CustomTextAlignment switch
         {
             CaptionAlignment.Left => HorizontalAlignment.Left,
@@ -533,9 +550,9 @@ public partial class OverlayWindow : Window
         }
 
         // Visuals are created in code, so force layout before trusting DesiredSize.
-        Panel.UpdateLayout();
-        Panel.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-        var desired = Panel.DesiredSize;
+        Shell.UpdateLayout();
+        Shell.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        var desired = Shell.DesiredSize;
         if (desired.Width > 0 && desired.Height > 0)
         {
             Width = Math.Ceiling(desired.Width);
