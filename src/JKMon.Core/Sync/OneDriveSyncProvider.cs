@@ -29,6 +29,11 @@ public sealed class OneDriveSyncProvider : ISyncProvider
     // A slow sync moves file by file, so the gaps between bursts are longer than a fast hydration's.
     private static readonly TimeSpan ActivityHold = TimeSpan.FromSeconds(15);
 
+    // Idle OneDrive produces occasional short bursts of its own file I/O; one peaked at 988 KiB/s across two
+    // samples with nothing syncing. Demanding three consecutive samples rejects those without losing a real
+    // transfer, which stays up for far longer than the nine seconds this costs.
+    private const int ActivitySamplesToAssert = 3;
+
     private readonly OneDriveActivityProbe _activity;
     private readonly ActivityGate _gate;
     private readonly TimeProvider _time;
@@ -41,7 +46,7 @@ public sealed class OneDriveSyncProvider : ISyncProvider
         _activity = activity ?? new OneDriveActivityProbe();
         _time = timeProvider ?? TimeProvider.System;
         _log = log;
-        _gate = new ActivityGate(ActivityThresholdBytesPerSecond, ActivityHold);
+        _gate = new ActivityGate(ActivityThresholdBytesPerSecond, ActivityHold, ActivitySamplesToAssert);
     }
 
     /// <summary>Polling repeats every few seconds, so a persistent failure is logged once rather than forever.</summary>
