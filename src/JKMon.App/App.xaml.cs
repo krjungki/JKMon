@@ -1,4 +1,5 @@
-﻿using System.Windows;
+﻿using System.Runtime.InteropServices;
+using System.Windows;
 using System.Windows.Threading;
 using JKMon.App.Update;
 using JKMon.Core;
@@ -48,9 +49,16 @@ public partial class App : System.Windows.Application
 
         _collector = new SystemMetricsCollector();
         _syncthing = new SyncthingSyncProvider();
+
+        // Architecture matters here: this build is x64, so on Windows on ARM it runs emulated and some system
+        // libraries behave differently. A diagnostic report is useless without it.
+        DiagnosticLog.Write(
+            $"start {typeof(App).Assembly.GetName().Version} process={RuntimeInformation.ProcessArchitecture} " +
+            $"os={RuntimeInformation.OSArchitecture} {RuntimeInformation.OSDescription}");
+
         _engine = new MonitorEngine(
             () => _collector.Read(),
-            [new OneDriveSyncProvider(), _syncthing, new GlobalSecureAccessSyncProvider()])
+            [new OneDriveSyncProvider(log: DiagnosticLog.Write), _syncthing, new GlobalSecureAccessSyncProvider()])
         {
             Settings = _settings
         };

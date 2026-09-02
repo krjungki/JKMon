@@ -32,12 +32,28 @@ public sealed class OneDriveSyncProvider : ISyncProvider
     private readonly OneDriveActivityProbe _activity;
     private readonly ActivityGate _gate;
     private readonly TimeProvider _time;
+    private readonly Action<string>? _log;
+    private string? _lastLogged;
 
-    public OneDriveSyncProvider(OneDriveActivityProbe? activity = null, TimeProvider? timeProvider = null)
+    public OneDriveSyncProvider(
+        OneDriveActivityProbe? activity = null, TimeProvider? timeProvider = null, Action<string>? log = null)
     {
         _activity = activity ?? new OneDriveActivityProbe();
         _time = timeProvider ?? TimeProvider.System;
+        _log = log;
         _gate = new ActivityGate(ActivityThresholdBytesPerSecond, ActivityHold);
+    }
+
+    /// <summary>Polling repeats every few seconds, so a persistent failure is logged once rather than forever.</summary>
+    private void LogOnce(string message)
+    {
+        if (_lastLogged == message)
+        {
+            return;
+        }
+
+        _lastLogged = message;
+        _log?.Invoke(message);
     }
 
     public string ProviderId => "onedrive";
@@ -61,6 +77,7 @@ public sealed class OneDriveSyncProvider : ISyncProvider
         }
         catch (Exception ex) when (ex is System.Security.SecurityException or UnauthorizedAccessException or IOException)
         {
+            LogOnce($"onedrive: sync roots unreadable: {ex.GetType().Name}: {ex.Message}");
             return new SyncProviderSnapshot(ProviderId, Initial, SyncState.Unknown, "sync roots unreadable");
         }
 
@@ -70,14 +87,41 @@ public sealed class OneDriveSyncProvider : ISyncProvider
         }
 
         var states = new List<SyncState>(roots.Count);
+        string? unreadable = null;
         foreach (var root in roots)
         {
-            var status = TryReadProviderStatus(root);
-            states.Add(status is null ? SyncState.Unknown : OneDriveStatusMapper.ToSyncState(status.Value));
+            var status = TryReadProviderStatus(root, out var failure);
+            if (status is null)
+            {
+                unreadable ??= failure;
+                continue;
+            }
+
+            states.Add(OneDriveStatusMapper.ToSyncState(status.Value));
+        }
+
+        var transferring = _gate.Update(_activity.TotalTransferBytes(), _time.GetUtcNow());
+
+        // Cloud Filter reports Idle even mid-sync, so a status this build cannot read costs only the error states.
+        // Reporting grey forever would be worse than judging by transfer activity, which is the signal that works.
+        if (states.Count == 0)
+        {
+            LogOnce($"onedrive: provider status unreadable for all {roots.Count} sync root(s), " +
+                    $"falling back to transfer activity. reason: {unreadable}");
+
+            return transferring
+                ? new SyncProviderSnapshot(ProviderId, Initial, SyncState.Synchronizing,
+                    $"status unavailable, transferring ({ByteRate(_gate.LastRateBytesPerSecond)})")
+                : new SyncProviderSnapshot(ProviderId, Initial, SyncState.UpToDate,
+                    "status unavailable, no transfer activity");
+        }
+
+        if (unreadable is not null)
+        {
+            LogOnce($"onedrive: provider status unreadable for some sync roots. reason: {unreadable}");
         }
 
         var aggregate = OneDriveStatusMapper.Aggregate(states);
-        var transferring = _gate.Update(_activity.TotalTransferBytes(), _time.GetUtcNow());
 
         // Errors and disconnections outrank activity; otherwise activity is what distinguishes syncing from settled.
         if (aggregate is SyncState.UpToDate && transferring)
@@ -138,28 +182,39 @@ public sealed class OneDriveSyncProvider : ISyncProvider
         return results;
     }
 
-    private static CloudProviderStatus? TryReadProviderStatus(string path)
+    private static CloudProviderStatus? TryReadProviderStatus(string path, out string failure)
     {
+        failure = string.Empty;
         var buffer = Marshal.AllocHGlobal(BufferSize);
         try
         {
             var hr = NativeMethods.CfGetSyncRootInfoByPath(
                 path, NativeMethods.CfSyncRootInfoStandard, buffer, BufferSize, out var returned);
 
-            if (hr != 0 || returned < ProviderNameOffset)
+            if (hr != 0)
             {
+                failure = $"CfGetSyncRootInfoByPath returned 0x{hr:X8}";
+                return null;
+            }
+
+            if (returned < ProviderNameOffset)
+            {
+                failure = $"CfGetSyncRootInfoByPath returned only {returned} bytes";
                 return null;
             }
 
             var raw = (uint)Marshal.ReadInt32(buffer, ProviderStatusOffset);
             return (CloudProviderStatus)raw;
         }
-        catch (DllNotFoundException)
+        catch (DllNotFoundException ex)
         {
+            // A likely path on Windows on ARM, where this x64 build runs emulated.
+            failure = $"CldApi.dll could not be loaded: {ex.Message}";
             return null;
         }
-        catch (EntryPointNotFoundException)
+        catch (EntryPointNotFoundException ex)
         {
+            failure = $"CfGetSyncRootInfoByPath is missing: {ex.Message}";
             return null;
         }
         finally
