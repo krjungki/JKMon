@@ -33,6 +33,9 @@ public sealed record JkMonSettings
     public const double MinGaugeLabelFontSize = 6;
     public const double MaxGaugeLabelFontSize = 32;
 
+    public const double MinGaugeCaptionFontSize = 0;
+    public const double MaxGaugeCaptionFontSize = 32;
+
     /// <summary>A caption, not a paragraph. The cap also stops a corrupted file from stretching the overlay off screen.</summary>
     public const int MaxCustomTextLength = 64;
 
@@ -64,6 +67,9 @@ public sealed record JkMonSettings
     public int MarginPixels { get; init; } = 8;
 
     public bool StartWithWindows { get; init; }
+
+    /// <summary>Fades the overlay out while the pointer is over it so it never hides what is underneath.</summary>
+    public bool HideWhenPointerOver { get; init; }
 
     public string TextColor { get; init; } = DefaultTextColor;
 
@@ -97,6 +103,9 @@ public sealed record JkMonSettings
 
     /// <summary>Size of the percentage drawn above the bar and pie gauges.</summary>
     public double GaugeLabelFontSize { get; init; } = 9;
+
+    /// <summary>Size of the CPU and Memory names above the numeric gauges. 0 hides them.</summary>
+    public double GaugeCaptionFontSize { get; init; } = 9;
 
     /// <summary>Adds one small bar per logical processor beside the CPU gauge.</summary>
     public bool ShowIndividualCores { get; init; }
@@ -175,6 +184,8 @@ public sealed record JkMonSettings
             GaugeOutlineThickness, MinGaugeOutlineThickness, MaxGaugeOutlineThickness, 2),
         GaugeLabelFontSize = ClampDouble(
             GaugeLabelFontSize, MinGaugeLabelFontSize, MaxGaugeLabelFontSize, 9),
+        GaugeCaptionFontSize = ClampDouble(
+            GaugeCaptionFontSize, MinGaugeCaptionFontSize, MaxGaugeCaptionFontSize, 9),
         BackgroundOpacityPercent = Clamp(BackgroundOpacityPercent, 0, 100, 45),
         FontFamily = string.IsNullOrWhiteSpace(FontFamily) ? DefaultFontFamily : FontFamily.Trim(),
         FontSize = ClampDouble(FontSize, MinFontSize, MaxFontSize, 13),

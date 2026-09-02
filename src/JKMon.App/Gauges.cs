@@ -218,6 +218,42 @@ internal sealed class LabelledGauge : IGauge
         : "0";
 }
 
+/// <summary>Names the metric above a gauge whose shape does not already identify it.</summary>
+internal sealed class CaptionedGauge : IGauge
+{
+    private readonly StackPanel _host;
+    private readonly IGauge _inner;
+
+    internal CaptionedGauge(IGauge inner, GaugeChrome chrome, string caption, double fontSize)
+    {
+        _inner = inner;
+
+        var text = new TextBlock
+        {
+            Text = caption,
+            FontFamily = chrome.Font,
+            FontWeight = FontWeights.Bold,
+            FontSize = fontSize,
+            Foreground = chrome.Fill,
+            Effect = chrome.Shadow,
+            TextAlignment = TextAlignment.Center,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            TextWrapping = TextWrapping.NoWrap
+        };
+
+        // The number carries a fixed width, so it has to be centred or a wider caption would leave it off to one side.
+        inner.Element.HorizontalAlignment = HorizontalAlignment.Center;
+
+        _host = new StackPanel { Orientation = Orientation.Vertical };
+        _host.Children.Add(text);
+        _host.Children.Add(inner.Element);
+    }
+
+    public FrameworkElement Element => _host;
+
+    public void Set(double percent, string text) => _inner.Set(percent, text);
+}
+
 /// <summary>One slim bar per logical processor.</summary>
 internal sealed class CoreBarStrip
 {

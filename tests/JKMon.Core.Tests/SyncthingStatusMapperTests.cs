@@ -5,7 +5,7 @@ namespace JKMon.Core.Tests;
 public class SyncthingStatusMapperTests
 {
     private static SyncthingFolderStatus Folder(string state, long need = 0, long pullErrors = 0, long localChanges = 0) =>
-        new("Sync-DevRepos", state, need, pullErrors, localChanges);
+        new("test-folder", state, need, pullErrors, localChanges);
 
     [Fact]
     public void Folder_IsGreen_OnlyWhenIdleAndNothingOutstanding()

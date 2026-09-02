@@ -22,9 +22,12 @@ public sealed class OneDriveSyncProvider : ISyncProvider
     private const int ProviderNameOffset = 28;
     private const int BufferSize = 8192;
 
-    // Idle OneDrive transfers a few KiB/s; an active sync was measured at 10-30 MiB/s.
-    private static readonly long ActivityThresholdBytesPerSecond = 64 * 1024;
-    private static readonly TimeSpan ActivityHold = TimeSpan.FromSeconds(6);
+    // Measured on an idle client: ~60 samples sat at 0 KiB/s with an 8.4 KiB/s worst case, so the noise floor is far
+    // lower than the 64 KiB/s this once used. That old threshold reported "settled" for any sync slower than itself.
+    private static readonly long ActivityThresholdBytesPerSecond = 16 * 1024;
+
+    // A slow sync moves file by file, so the gaps between bursts are longer than a fast hydration's.
+    private static readonly TimeSpan ActivityHold = TimeSpan.FromSeconds(15);
 
     private readonly OneDriveActivityProbe _activity;
     private readonly ActivityGate _gate;

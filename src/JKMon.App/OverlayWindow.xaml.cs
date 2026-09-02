@@ -5,6 +5,7 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Effects;
 using System.Windows.Shapes;
+using System.Windows.Threading;
 using JKMon.App.Interop;
 using JKMon.Core.Presentation;
 using JKMon.Core.Settings;
@@ -33,6 +34,7 @@ public partial class OverlayWindow : Window
     private IGauge? _cpuGauge;
     private IGauge? _memoryGauge;
     private CoreBarStrip? _coreBars;
+    private DispatcherTimer? _pointerWatch;
 
     /// <summary>Height of one text row, which sets how tall the gauges are drawn.</summary>
     private double _rowHeight = 16;
@@ -100,6 +102,49 @@ public partial class OverlayWindow : Window
         var hwnd = OverlayWindowInterop.GetHandle(this);
         OverlayWindowInterop.ApplyLayer(hwnd, _settings.Layer);
         ResizeAndReposition();
+        ApplyPointerWatch();
+    }
+
+    /// <summary>
+    /// The overlay is click-through, so it never receives mouse messages and the pointer has to be polled. The
+    /// interval is short enough to feel immediate and the call itself costs almost nothing.
+    /// </summary>
+    private void ApplyPointerWatch()
+    {
+        if (!_settings.HideWhenPointerOver)
+        {
+            _pointerWatch?.Stop();
+            Panel.Opacity = 1;
+            return;
+        }
+
+        if (_pointerWatch is null)
+        {
+            _pointerWatch = new DispatcherTimer(DispatcherPriority.Background)
+            {
+                Interval = TimeSpan.FromMilliseconds(120)
+            };
+
+            _pointerWatch.Tick += (_, _) => UpdatePointerConcealment();
+        }
+
+        _pointerWatch.Start();
+        UpdatePointerConcealment();
+    }
+
+    private void UpdatePointerConcealment()
+    {
+        var cursor = OverlayWindowInterop.CursorPosition();
+        if (cursor is null)
+        {
+            return;
+        }
+
+        var bounds = OverlayWindowInterop.GetBounds(OverlayWindowInterop.GetHandle(this));
+        var conceal = HoverGate.ShouldConceal(_settings.HideWhenPointerOver, bounds, cursor.Value.X, cursor.Value.Y);
+
+        // Opacity rather than visibility: a collapsed panel would shrink the window and let the pointer fall outside.
+        Panel.Opacity = conceal ? 0 : 1;
     }
 
     public void Update(OverlayModel model)
@@ -210,17 +255,18 @@ public partial class OverlayWindow : Window
             PercentWidthSamples.Max(s => Measured(s, family, FontWeights.Bold, numberSize).WidthIncludingTrailingWhitespace));
         var barWidth = Math.Ceiling(height * 0.5);
         var labelSize = _settings.GaugeLabelFontSize;
+        var captionSize = _settings.GaugeCaptionFontSize;
 
         _cpuGauge = _settings.CpuGauge == CpuGaugeStyle.Bar
             ? new LabelledGauge(new BarGauge(cpu, barWidth), cpu, labelSize)
-            : new NumberGauge(cpu, numberSize, numberWidth);
+            : Captioned(new NumberGauge(cpu, numberSize, numberWidth), cpu, "CPU", captionSize);
         CpuHost.Content = _cpuGauge.Element;
 
         _memoryGauge = _settings.MemoryGauge switch
         {
             MemoryGaugeStyle.Bar => new LabelledGauge(new BarGauge(memory, barWidth), memory, labelSize),
             MemoryGaugeStyle.Pie => new LabelledGauge(new PieGauge(memory), memory, labelSize),
-            _ => new NumberGauge(memory, numberSize, numberWidth)
+            _ => Captioned(new NumberGauge(memory, numberSize, numberWidth), memory, "Memory", captionSize)
         };
         MemoryHost.Content = _memoryGauge.Element;
         MemoryHost.Margin = new Thickness(gap, 0, 0, 0);
@@ -230,6 +276,9 @@ public partial class OverlayWindow : Window
         CoreBars.Visibility = _settings.ShowIndividualCores ? Visibility.Visible : Visibility.Collapsed;
         _coreBars = new CoreBarStrip(CoreBars, cpu, Math.Max(5d, Math.Round(_settings.FontSize * 0.55)));
     }
+
+    private static IGauge Captioned(IGauge inner, GaugeChrome chrome, string caption, double fontSize) =>
+        fontSize > 0 ? new CaptionedGauge(inner, chrome, caption, fontSize) : inner;
 
     private FormattedText Measured(string text, FontFamily family, FontWeight weight, double size)
     {

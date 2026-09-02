@@ -23,6 +23,10 @@ public partial class SettingsWindow : Window
 
     private readonly List<string> _providerOrder = [];
 
+    /// <summary>Empty until the first refresh reports which clients are running, which hides the list rather than
+    /// showing providers the machine does not have.</summary>
+    private List<string> _presentProviders = [];
+
     private int[] _customColors = [];
 
     private DateTimeOffset _lastUpdateCheckUtc;
@@ -97,6 +101,7 @@ public partial class SettingsWindow : Window
         OutlineColorBox.TextChanged += (_, _) => Publish();
         OutlineWidthSlider.ValueChanged += (_, _) => Publish();
         LabelSizeSlider.ValueChanged += (_, _) => Publish();
+        CaptionSizeSlider.ValueChanged += (_, _) => Publish();
         CpuGaugeColorBox.TextChanged += (_, _) => Publish();
         MemoryGaugeColorBox.TextChanged += (_, _) => Publish();
         OpacitySlider.ValueChanged += (_, _) => Publish();
@@ -117,6 +122,8 @@ public partial class SettingsWindow : Window
         MonitorBox.SelectionChanged += (_, _) => Publish();
         StartupCheck.Checked += (_, _) => Publish();
         StartupCheck.Unchecked += (_, _) => Publish();
+        HideOnHoverCheck.Checked += (_, _) => Publish();
+        HideOnHoverCheck.Unchecked += (_, _) => Publish();
         UpdateNeverRadio.Checked += (_, _) => Publish();
         UpdateDailyRadio.Checked += (_, _) => Publish();
         UpdateWeeklyRadio.Checked += (_, _) => Publish();
@@ -198,6 +205,7 @@ public partial class SettingsWindow : Window
             OutlineColorBox.Text = normalized.GaugeOutlineColor;
             OutlineWidthSlider.Value = normalized.GaugeOutlineThickness;
             LabelSizeSlider.Value = normalized.GaugeLabelFontSize;
+            CaptionSizeSlider.Value = normalized.GaugeCaptionFontSize;
             CpuGaugeColorBox.Text = normalized.CpuGaugeColor;
             MemoryGaugeColorBox.Text = normalized.MemoryGaugeColor;
             OpacitySlider.Value = normalized.BackgroundOpacityPercent;
@@ -218,6 +226,7 @@ public partial class SettingsWindow : Window
             MonitorBox.SelectedIndex = monitorIndex >= 0 ? monitorIndex : 0;
 
             StartupCheck.IsChecked = normalized.StartWithWindows;
+            HideOnHoverCheck.IsChecked = normalized.HideWhenPointerOver;
             UpdateNeverRadio.IsChecked = normalized.UpdateCheck == UpdateCheckFrequency.Never;
             UpdateDailyRadio.IsChecked = normalized.UpdateCheck == UpdateCheckFrequency.Daily;
             UpdateWeeklyRadio.IsChecked = normalized.UpdateCheck == UpdateCheckFrequency.Weekly;
@@ -271,6 +280,7 @@ public partial class SettingsWindow : Window
         GaugeOutlineColor = OutlineColorBox.Text,
         GaugeOutlineThickness = OutlineWidthSlider.Value,
         GaugeLabelFontSize = Math.Round(LabelSizeSlider.Value),
+        GaugeCaptionFontSize = Math.Round(CaptionSizeSlider.Value),
         CpuGaugeColor = CpuGaugeColorBox.Text,
         MemoryGaugeColor = MemoryGaugeColorBox.Text,
         BackgroundOpacityPercent = (int)Math.Round(OpacitySlider.Value),
@@ -289,6 +299,7 @@ public partial class SettingsWindow : Window
             ? _monitorDevices[MonitorBox.SelectedIndex]
             : string.Empty,
         StartWithWindows = StartupCheck.IsChecked == true,
+        HideWhenPointerOver = HideOnHoverCheck.IsChecked == true,
         ProviderOrder = _providerOrder.ToList(),
         UpdateCheck = UpdateDailyRadio.IsChecked == true ? UpdateCheckFrequency.Daily
             : UpdateWeeklyRadio.IsChecked == true ? UpdateCheckFrequency.Weekly
@@ -299,8 +310,28 @@ public partial class SettingsWindow : Window
 
     private void ShowProviderOrder(int selected)
     {
-        OrderList.ItemsSource = _providerOrder.Select(SyncProviderCatalog.DisplayName).ToList();
-        OrderList.SelectedIndex = Math.Clamp(selected, 0, Math.Max(0, _providerOrder.Count - 1));
+        var visible = ProviderOrderView.Visible(_providerOrder, _presentProviders);
+
+        OrderList.ItemsSource = visible.Select(SyncProviderCatalog.DisplayName).ToList();
+        OrderList.SelectedIndex = Math.Clamp(selected, 0, Math.Max(0, visible.Count - 1));
+
+        var any = visible.Count > 0;
+        OrderList.Visibility = any ? Visibility.Visible : Visibility.Collapsed;
+        NoProvidersText.Visibility = any ? Visibility.Collapsed : Visibility.Visible;
+        OrderUpButton.IsEnabled = visible.Count > 1;
+        OrderDownButton.IsEnabled = visible.Count > 1;
+    }
+
+    /// <summary>The set can change while the window is open, so a client started meanwhile shows up without a reopen.</summary>
+    internal void SetPresentProviders(IReadOnlyList<string> providerIds)
+    {
+        if (_presentProviders.SequenceEqual(providerIds, StringComparer.Ordinal))
+        {
+            return;
+        }
+
+        _presentProviders = [.. providerIds];
+        ShowProviderOrder(OrderList.SelectedIndex);
     }
 
     /// <summary>Reordering is a list edit, so the selection follows the moved entry rather than the position.</summary>
@@ -308,12 +339,15 @@ public partial class SettingsWindow : Window
     {
         var from = OrderList.SelectedIndex;
         var to = from + offset;
-        if (from < 0 || to < 0 || to >= _providerOrder.Count)
+        var visibleCount = ProviderOrderView.Visible(_providerOrder, _presentProviders).Count;
+        if (from < 0 || to < 0 || to >= visibleCount)
         {
             return;
         }
 
-        (_providerOrder[from], _providerOrder[to]) = (_providerOrder[to], _providerOrder[from]);
+        var reordered = ProviderOrderView.Move(_providerOrder, _presentProviders, from, to);
+        _providerOrder.Clear();
+        _providerOrder.AddRange(reordered);
         ShowProviderOrder(to);
         Publish();
     }
@@ -332,6 +366,7 @@ public partial class SettingsWindow : Window
         CustomSizeText.Text = Math.Round(CustomSizeSlider.Value).ToString(CultureInfo.InvariantCulture);
         OutlineWidthText.Text = OutlineWidthSlider.Value.ToString("0.#", CultureInfo.InvariantCulture);
         LabelSizeText.Text = Math.Round(LabelSizeSlider.Value).ToString(CultureInfo.InvariantCulture);
+        CaptionSizeText.Text = Math.Round(CaptionSizeSlider.Value).ToString(CultureInfo.InvariantCulture);
         FontSizeText.Text = Math.Round(FontSizeSlider.Value).ToString(CultureInfo.InvariantCulture);
         CircleText.Text = Math.Round(CircleSlider.Value).ToString(CultureInfo.InvariantCulture);
         RefreshText.Text = string.Create(CultureInfo.InvariantCulture, $"{Math.Round(RefreshSlider.Value)}s");

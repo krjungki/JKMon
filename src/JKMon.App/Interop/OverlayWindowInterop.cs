@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
+using JKMon.Core.Presentation;
 using JKMon.Core.Settings;
 
 namespace JKMon.App.Interop;
@@ -65,6 +66,26 @@ internal static class OverlayWindowInterop
 
         return (0, 0);
     }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct NativePoint
+    {
+        internal int X;
+        internal int Y;
+    }
+
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetCursorPos(out NativePoint point);
+
+    internal static PlacementMath.Rect GetBounds(IntPtr hwnd) =>
+        hwnd != IntPtr.Zero && GetWindowRect(hwnd, out var rect)
+            ? new PlacementMath.Rect(rect.Left, rect.Top, rect.Right, rect.Bottom)
+            : default;
+
+    /// <summary>The overlay is click-through, so the pointer has to be polled rather than tracked by messages.</summary>
+    internal static (int X, int Y)? CursorPosition() =>
+        GetCursorPos(out var point) ? (point.X, point.Y) : null;
 
     /// <summary>Moving in physical pixels avoids WPF's device independent conversion across mixed-DPI monitors.</summary>
     internal static void MoveTo(IntPtr hwnd, int x, int y)

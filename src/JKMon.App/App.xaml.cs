@@ -15,6 +15,8 @@ public partial class App : System.Windows.Application
     private SyncthingSyncProvider? _syncthing;
     private OverlayWindow? _overlay;
     private SettingsWindow? _settingsWindow;
+
+    private IReadOnlyList<string> _presentProviders = [];
     private TrayController? _tray;
     private DispatcherTimer? _timer;
     private SettingsStore? _store;
@@ -130,6 +132,8 @@ public partial class App : System.Windows.Application
             var model = await _engine.RefreshAsync();
             _overlay.Update(model);
             _tray?.ShowStatus(model);
+            _presentProviders = [.. model.Circles.Select(circle => circle.ProviderId)];
+            _settingsWindow?.SetPresentProviders(_presentProviders);
 
             if (UpdateService.IsDue(_settings, atStartup: false))
             {
@@ -201,6 +205,7 @@ public partial class App : System.Windows.Application
         }
 
         var window = new SettingsWindow(_settings);
+        window.SetPresentProviders(_presentProviders);
         window.SettingsChanged += UpdateSettings;
         window.Closed += (_, _) => _settingsWindow = null;
         _settingsWindow = window;

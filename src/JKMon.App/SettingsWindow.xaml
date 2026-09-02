@@ -239,6 +239,17 @@
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="110" />
                             <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="44" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Caption size" ToolTip="CPU 와 Memory 이름을 숫자 게이지 위에 표시한다. 0 이면 숨긴다" />
+                        <Slider Grid.Column="1" x:Name="CaptionSizeSlider" Minimum="0" Maximum="32" TickFrequency="1" IsSnapToTickEnabled="True" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="2" x:Name="CaptionSizeText" HorizontalAlignment="Right" />
+                    </Grid>
+
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="110" />
+                            <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="34" />
                         </Grid.ColumnDefinitions>
                         <TextBlock Grid.Column="0" Text="CPU usage" />
@@ -272,7 +283,15 @@
                                  Background="#FF262C38"
                                  Foreground="#FFE6EAF0"
                                  BorderBrush="#FF3A4354"
-                                 ToolTip="Left to right order of the status icons" />
+                                 ToolTip="Left to right order of the status icons. Only the clients running on this PC are listed" />
+                        <TextBlock Grid.Column="1"
+                                   x:Name="NoProvidersText"
+                                   Visibility="Collapsed"
+                                   Text="실행 중인 동기화 앱이 없습니다"
+                                   Foreground="#FF8A93A6"
+                                   VerticalAlignment="Top"
+                                   Margin="0,4,0,0"
+                                   TextWrapping="Wrap" />
                         <StackPanel Grid.Column="2" Orientation="Vertical" Margin="6,0,0,0">
                             <Button x:Name="OrderUpButton" Content="&#x25B2;" Height="30" ToolTip="Move earlier" />
                             <Button x:Name="OrderDownButton" Content="&#x25BC;" Height="30" Margin="0,6,0,0" ToolTip="Move later" />
@@ -445,6 +464,11 @@
                     </Grid>
 
                     <CheckBox x:Name="StartupCheck" Content="Start with Windows" Margin="110,10,0,0" />
+
+                    <CheckBox x:Name="HideOnHoverCheck"
+                              Content="Fade out while the mouse is over it"
+                              ToolTip="Useful with Always on top so the overlay never covers what you are reading"
+                              Margin="110,6,0,0" />
 
                     <Grid Margin="0,10,0,8">
                         <Grid.ColumnDefinitions>
