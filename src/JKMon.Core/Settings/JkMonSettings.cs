@@ -39,25 +39,43 @@ public sealed record JkMonSettings
     /// <summary>A caption, not a paragraph. The cap also stops a corrupted file from stretching the overlay off screen.</summary>
     public const int MaxCustomTextLength = 64;
 
-    public const string DefaultTextColor = "#35FF6A";
-    public const string DefaultBackgroundColor = "#101418";
+    // A fresh install has to be a coherent theme, so the defaults are the dark palette rather than a separate
+    // third design. ThemeCatalog.Apply writes exactly these values when the dark theme is chosen.
+    public const string DefaultTextColor = "#FFFFFF";
+    public const string DefaultBackgroundColor = "#000000";
     public const string DefaultFontFamily = "Segoe UI";
-    public const string DefaultCustomTextColor = "#E6EAF0";
+    public const string DefaultCustomTextColor = "#FFFFFF";
 
-    public const string DefaultGaugeOutlineColor = "#2F81F7";
-    public const string DefaultCpuGaugeColor = "#35FF6A";
-    public const string DefaultMemoryGaugeColor = "#C77DFF";
+    public const string DefaultGaugeOutlineColor = "#3C3C3C";
+    public const string DefaultCpuGaugeColor = "#FFFFFF";
+    public const string DefaultMemoryGaugeColor = "#BBBBBB";
 
-    public const string DefaultActivityIdleColor = "#6B7280";
-    public const string DefaultActivityNormalColor = "#35FF6A";
-    public const string DefaultActivityElevatedColor = "#FFC857";
-    public const string DefaultActivityHighColor = "#FF5B5B";
+    public const string DefaultActivityIdleColor = "#7E7E7E";
+    public const string DefaultActivityNormalColor = "#BBBBBB";
+    public const string DefaultActivityElevatedColor = "#F4B400";
+    public const string DefaultActivityHighColor = "#E22718";
+
+    /// <summary>Deliberately generic: the stripe ships off, and these are only a starting point when it is enabled.</summary>
+    public const string DefaultAccentStripeFirstColor = "#0066CC";
+    public const string DefaultAccentStripeSecondColor = "#5E5CE6";
+    public const string DefaultAccentStripeThirdColor = "#FF3B30";
 
     /// <summary>Thresholds are edited in KiB/s because bytes per second is an awkward number to type.</summary>
     public const double MinActivityThresholdKib = 1;
     public const double MaxActivityThresholdKib = 1024d * 1024;
 
     public int RefreshSeconds { get; init; } = 2;
+
+    /// <summary>Owns every colour and typeface; changing it never touches placement, sizes or the caption.</summary>
+    public AppTheme Theme { get; init; } = AppTheme.Dark;
+
+    public AccentStripeMode AccentStripe { get; init; } = AccentStripeMode.None;
+
+    public string AccentStripeFirstColor { get; init; } = DefaultAccentStripeFirstColor;
+
+    public string AccentStripeSecondColor { get; init; } = DefaultAccentStripeSecondColor;
+
+    public string AccentStripeThirdColor { get; init; } = DefaultAccentStripeThirdColor;
 
     public int ProviderPollSeconds { get; init; } = 3;
 
@@ -94,7 +112,7 @@ public sealed record JkMonSettings
     public string MemoryGaugeColor { get; init; } = DefaultMemoryGaugeColor;
 
     /// <summary>Outline width in pixels. 0 removes the outline entirely.</summary>
-    public double GaugeOutlineThickness { get; init; } = 2;
+    public double GaugeOutlineThickness { get; init; } = 1;
 
     /// <summary>Size of the percentage drawn above the bar and pie gauges.</summary>
     public double GaugeLabelFontSize { get; init; } = 9;
@@ -133,7 +151,7 @@ public sealed record JkMonSettings
         DiskSecondThresholdKib * 1024);
 
     /// <summary>0 renders the panel fully transparent, 100 fully opaque.</summary>
-    public int BackgroundOpacityPercent { get; init; } = 45;
+    public int BackgroundOpacityPercent { get; init; } = 100;
 
     public string FontFamily { get; init; } = DefaultFontFamily;
 
@@ -141,7 +159,7 @@ public sealed record JkMonSettings
 
     public bool BoldText { get; init; } = true;
 
-    public bool TextShadow { get; init; } = true;
+    public bool TextShadow { get; init; } = false;
 
     public int CircleDiameter { get; init; } = 26;
 
@@ -157,7 +175,7 @@ public sealed record JkMonSettings
     public CaptionAlignment CustomTextAlignment { get; init; } = CaptionAlignment.Center;
 
     /// <summary>The caption sits outside the panel background, so it carries its own shadow setting.</summary>
-    public bool CustomTextShadow { get; init; } = true;
+    public bool CustomTextShadow { get; init; } = false;
 
     /// <summary>Left-to-right order of the status circles. Providers missing from the list are appended.</summary>
     public IReadOnlyList<string> ProviderOrder { get; init; } = SyncProviderCatalog.DefaultOrder;
@@ -190,7 +208,7 @@ public sealed record JkMonSettings
         CpuGaugeColor = ValidColor(CpuGaugeColor, DefaultCpuGaugeColor),
         MemoryGaugeColor = ValidColor(MemoryGaugeColor, DefaultMemoryGaugeColor),
         GaugeOutlineThickness = ClampDouble(
-            GaugeOutlineThickness, MinGaugeOutlineThickness, MaxGaugeOutlineThickness, 2),
+            GaugeOutlineThickness, MinGaugeOutlineThickness, MaxGaugeOutlineThickness, 1),
         GaugeLabelFontSize = ClampDouble(
             GaugeLabelFontSize, MinGaugeLabelFontSize, MaxGaugeLabelFontSize, 9),
         GaugeCaptionFontSize = ClampDouble(
@@ -207,7 +225,7 @@ public sealed record JkMonSettings
             DiskFirstThresholdKib, MinActivityThresholdKib, MaxActivityThresholdKib, 5 * 1024),
         DiskSecondThresholdKib = ClampDouble(
             DiskSecondThresholdKib, MinActivityThresholdKib, MaxActivityThresholdKib, 50 * 1024),
-        BackgroundOpacityPercent = Clamp(BackgroundOpacityPercent, 0, 100, 45),
+        BackgroundOpacityPercent = Clamp(BackgroundOpacityPercent, 0, 100, 100),
         FontFamily = string.IsNullOrWhiteSpace(FontFamily) ? DefaultFontFamily : FontFamily.Trim(),
         FontSize = ClampDouble(FontSize, MinFontSize, MaxFontSize, 13),
         CircleDiameter = Clamp(CircleDiameter, MinCircleDiameter, MaxCircleDiameter, 26),
@@ -219,6 +237,11 @@ public sealed record JkMonSettings
         CustomTextColor = ValidColor(CustomTextColor, DefaultCustomTextColor),
         CustomTextAlignment = Enum.IsDefined(CustomTextAlignment) ? CustomTextAlignment : CaptionAlignment.Center,
         ProviderOrder = SyncProviderCatalog.Normalize(ProviderOrder),
+        Theme = Enum.IsDefined(Theme) ? Theme : AppTheme.Dark,
+        AccentStripe = Enum.IsDefined(AccentStripe) ? AccentStripe : AccentStripeMode.None,
+        AccentStripeFirstColor = ValidColor(AccentStripeFirstColor, DefaultAccentStripeFirstColor),
+        AccentStripeSecondColor = ValidColor(AccentStripeSecondColor, DefaultAccentStripeSecondColor),
+        AccentStripeThirdColor = ValidColor(AccentStripeThirdColor, DefaultAccentStripeThirdColor),
         UpdateCheck = Enum.IsDefined(UpdateCheck) ? UpdateCheck : UpdateCheckFrequency.Never
     };
 

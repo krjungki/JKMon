@@ -132,7 +132,7 @@ public class JkMonSettingsTests
     [InlineData(6, 6)]
     [InlineData(-3, 0)]
     [InlineData(99, 6)]
-    [InlineData(double.NaN, 2)]
+    [InlineData(double.NaN, 1)]
     public void Normalized_ClampsTheOutlineThickness(double input, double expected)
     {
         var settings = new JkMonSettings { GaugeOutlineThickness = input }.Normalized();

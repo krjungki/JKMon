@@ -1,11 +1,8 @@
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
-using System.Windows.Interop;
-using System.Windows.Media;
 using Microsoft.Win32;
 
-// File-level alias beats the WPF Shapes import that brings in a different Path type.
 using Path = System.IO.Path;
 
 namespace JKMon.App;
@@ -27,9 +24,10 @@ internal static class ProviderIconResolver
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool DestroyIcon(IntPtr handle);
 
-    private static readonly Dictionary<string, ImageSource?> Cache = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly Dictionary<string, Bitmap?> Cache = new(StringComparer.OrdinalIgnoreCase);
 
-    internal static ImageSource? Resolve(string providerId, int pixelSize)
+    /// <summary>The returned bitmap is cached and reused, so callers must not dispose it.</summary>
+    internal static Bitmap? Resolve(string providerId, int pixelSize)
     {
         var key = $"{providerId}:{pixelSize}";
         if (Cache.TryGetValue(key, out var cached))
@@ -42,7 +40,7 @@ internal static class ProviderIconResolver
         return source;
     }
 
-    private static ImageSource? Load(string providerId, int pixelSize)
+    private static Bitmap? Load(string providerId, int pixelSize)
     {
         var location = providerId switch
         {
@@ -55,7 +53,7 @@ internal static class ProviderIconResolver
         return location is null ? null : Extract(location.Value.Path, location.Value.Index, pixelSize);
     }
 
-    private static ImageSource? Extract(string path, int index, int pixelSize)
+    private static Bitmap? Extract(string path, int index, int pixelSize)
     {
         var large = IntPtr.Zero;
         var small = IntPtr.Zero;
@@ -68,10 +66,9 @@ internal static class ProviderIconResolver
                 return null;
             }
 
-            var source = Imaging.CreateBitmapSourceFromHIcon(
-                large, System.Windows.Int32Rect.Empty, System.Windows.Media.Imaging.BitmapSizeOptions.FromEmptyOptions());
-            source.Freeze();
-            return source;
+            // Copied off the shared icon so the bitmap outlives the handle destroyed below.
+            using var icon = Icon.FromHandle(large);
+            return icon.ToBitmap();
         }
         catch (Exception ex) when (ex is COMException or ArgumentException or DllNotFoundException)
         {

@@ -2,11 +2,10 @@ using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
 using System.Reflection;
-using System.Windows;
 using JKMon.Core.Settings;
 using JKMon.Core.Update;
 
-using MessageBox = System.Windows.MessageBox;
+using MessageBox = System.Windows.Forms.MessageBox;
 
 namespace JKMon.App.Update;
 
@@ -52,7 +51,7 @@ internal sealed class UpdateService : IDisposable
         {
             if (announceWhenCurrent)
             {
-                Say("업데이트를 확인하지 못했습니다. 네트워크를 확인한 뒤 다시 시도해 주세요.", MessageBoxImage.Warning);
+                Say("업데이트를 확인하지 못했습니다. 네트워크를 확인한 뒤 다시 시도해 주세요.", MessageBoxIcon.Warning);
             }
 
             return UpdateOutcome.CheckFailed;
@@ -63,7 +62,7 @@ internal sealed class UpdateService : IDisposable
         {
             if (announceWhenCurrent)
             {
-                Say($"이미 최신 버전입니다. (현재 {Current})", MessageBoxImage.Information);
+                Say($"이미 최신 버전입니다. (현재 {Current})", MessageBoxIcon.Information);
             }
 
             return UpdateOutcome.UpToDate;
@@ -73,10 +72,10 @@ internal sealed class UpdateService : IDisposable
             $"새 버전 {info.Version}이 있습니다. 현재 버전은 {Current}입니다.\n\n" +
             "지금 업데이트할까요? 앱이 잠시 종료된 뒤 다시 실행됩니다.",
             "JKMon 업데이트",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Question);
+            MessageBoxButtons.YesNo,
+            MessageBoxIcon.Question);
 
-        if (answer != MessageBoxResult.Yes)
+        if (answer != DialogResult.Yes)
         {
             return UpdateOutcome.Declined;
         }
@@ -84,14 +83,14 @@ internal sealed class UpdateService : IDisposable
         var staged = await new UpdateDownloader(_http).TryStageAsync(info, cancellationToken).ConfigureAwait(true);
         if (staged is null)
         {
-            Say("업데이트 파일을 내려받거나 검증하지 못했습니다. 설치된 버전은 그대로입니다.", MessageBoxImage.Warning);
+            Say("업데이트 파일을 내려받거나 검증하지 못했습니다. 설치된 버전은 그대로입니다.", MessageBoxIcon.Warning);
             return UpdateOutcome.StagingFailed;
         }
 
         if (!Launch(staged))
         {
             UpdateDownloader.TryDelete(staged.WorkDirectory);
-            Say("업데이트 프로그램을 실행하지 못했습니다. 설치된 버전은 그대로입니다.", MessageBoxImage.Warning);
+            Say("업데이트 프로그램을 실행하지 못했습니다. 설치된 버전은 그대로입니다.", MessageBoxIcon.Warning);
             return UpdateOutcome.StagingFailed;
         }
 
@@ -129,8 +128,8 @@ internal sealed class UpdateService : IDisposable
         }
     }
 
-    private static void Say(string message, MessageBoxImage icon) =>
-        MessageBox.Show(message, "JKMon 업데이트", MessageBoxButton.OK, icon);
+    private static void Say(string message, MessageBoxIcon icon) =>
+        MessageBox.Show(message, "JKMon 업데이트", MessageBoxButtons.OK, icon);
 
     internal static bool IsDue(JkMonSettings settings, DateTimeOffset appStartedUtc, bool alreadyCheckedThisRun) =>
         UpdateSchedule.IsDue(

@@ -1,6 +1,4 @@
 using System.Runtime.InteropServices;
-using System.Windows;
-using System.Windows.Interop;
 using JKMon.Core.Presentation;
 using JKMon.Core.Settings;
 
@@ -14,9 +12,10 @@ internal static class OverlayWindowInterop
 {
     private const int GwlExStyle = -20;
 
-    private const int WsExToolWindow = 0x00000080;
-    private const int WsExTransparent = 0x00000020;
-    private const int WsExNoActivate = 0x08000000;
+    internal const int WsExToolWindow = 0x00000080;
+    internal const int WsExTransparent = 0x00000020;
+    internal const int WsExNoActivate = 0x08000000;
+    internal const int WsExLayered = 0x00080000;
 
     private static readonly IntPtr HwndBottom = new(1);
     private static readonly IntPtr HwndTopMost = new(-1);
@@ -134,8 +133,6 @@ internal static class OverlayWindowInterop
         Marshal.StructureToPtr(position, lParam, fDeleteOld: false);
     }
 
-    internal static IntPtr GetHandle(Window window) => new WindowInteropHelper(window).Handle;
-
     /// <summary>Click-through and non-activating so the overlay never steals focus from real work.</summary>
     internal static void ApplyOverlayStyles(IntPtr hwnd)
     {
@@ -176,4 +173,90 @@ internal static class OverlayWindowInterop
 
     internal static bool IsTopMost(IntPtr hwnd) =>
         hwnd != IntPtr.Zero && (GetWindowLong(hwnd, GwlExStyle) & WsExTopMost) != 0;
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct NativeSize
+    {
+        internal int Cx;
+        internal int Cy;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct BlendFunction
+    {
+        internal byte BlendOp;
+        internal byte BlendFlags;
+        internal byte SourceConstantAlpha;
+        internal byte AlphaFormat;
+    }
+
+    private const byte AcSrcOver = 0x00;
+    private const byte AcSrcAlpha = 0x01;
+    private const int UlwAlpha = 0x00000002;
+
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool UpdateLayeredWindow(
+        IntPtr hwnd, IntPtr hdcDst, ref NativePoint pptDst, ref NativeSize psize,
+        IntPtr hdcSrc, ref NativePoint pptSrc, int crKey, ref BlendFunction pblend, int dwFlags);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetDC(IntPtr hwnd);
+
+    [DllImport("user32.dll")]
+    private static extern int ReleaseDC(IntPtr hwnd, IntPtr hdc);
+
+    [DllImport("gdi32.dll")]
+    private static extern IntPtr CreateCompatibleDC(IntPtr hdc);
+
+    [DllImport("gdi32.dll")]
+    private static extern IntPtr SelectObject(IntPtr hdc, IntPtr handle);
+
+    [DllImport("gdi32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool DeleteObject(IntPtr handle);
+
+    [DllImport("gdi32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool DeleteDC(IntPtr hdc);
+
+    /// <summary>
+    /// Moves, resizes and repaints the overlay in a single call. A layered window is composited by the window
+    /// manager from the bitmap handed over here, which is what gives per-pixel alpha without any WM_PAINT.
+    /// </summary>
+    internal static void PushLayeredSurface(IntPtr hwnd, Bitmap bitmap, int x, int y)
+    {
+        if (hwnd == IntPtr.Zero)
+        {
+            return;
+        }
+
+        var screen = GetDC(IntPtr.Zero);
+        var memory = CreateCompatibleDC(screen);
+        var surface = bitmap.GetHbitmap(Color.FromArgb(0));
+        var previous = SelectObject(memory, surface);
+
+        try
+        {
+            var position = new NativePoint { X = x, Y = y };
+            var size = new NativeSize { Cx = bitmap.Width, Cy = bitmap.Height };
+            var origin = new NativePoint { X = 0, Y = 0 };
+            var blend = new BlendFunction
+            {
+                BlendOp = AcSrcOver,
+                BlendFlags = 0,
+                SourceConstantAlpha = 255,
+                AlphaFormat = AcSrcAlpha
+            };
+
+            UpdateLayeredWindow(hwnd, screen, ref position, ref size, memory, ref origin, 0, ref blend, UlwAlpha);
+        }
+        finally
+        {
+            SelectObject(memory, previous);
+            DeleteObject(surface);
+            DeleteDC(memory);
+            ReleaseDC(IntPtr.Zero, screen);
+        }
+    }
 }

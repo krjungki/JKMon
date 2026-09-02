@@ -1,4 +1,3 @@
-using System.Windows;
 using JKMon.Core.Presentation;
 
 namespace JKMon.App.Interop;
@@ -7,7 +6,7 @@ namespace JKMon.App.Interop;
 internal static class OverlayPlacement
 {
     /// <summary>Falls back to the hosting monitor when no monitor is chosen or the chosen one is disconnected.</summary>
-    internal static PlacementMath.Rect WorkAreaFor(Window window, string? preferredDevice)
+    internal static PlacementMath.Rect WorkAreaFor(IntPtr hwnd, string? preferredDevice)
     {
         var chosen = MonitorCatalog.Find(preferredDevice);
         if (chosen is not null)
@@ -15,7 +14,7 @@ internal static class OverlayPlacement
             return chosen.WorkArea;
         }
 
-        var screen = System.Windows.Forms.Screen.FromHandle(OverlayWindowInterop.GetHandle(window));
+        var screen = System.Windows.Forms.Screen.FromHandle(hwnd);
         var area = screen.WorkingArea;
         return new PlacementMath.Rect(area.Left, area.Top, area.Right, area.Bottom);
     }

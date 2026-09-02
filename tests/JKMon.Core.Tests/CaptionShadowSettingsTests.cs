@@ -5,15 +5,15 @@ namespace JKMon.Core.Tests;
 public class CaptionShadowSettingsTests
 {
     [Fact]
-    public void DefaultsToOnBecauseTheCaptionSitsOverTheWallpaper()
+    public void DefaultsToOffBecauseNeitherThemeShadowsText()
     {
-        Assert.True(new JkMonSettings().Normalized().CustomTextShadow);
+        Assert.False(new JkMonSettings().Normalized().CustomTextShadow);
     }
 
     [Fact]
-    public void CanBeTurnedOff()
+    public void CanBeTurnedOn()
     {
-        Assert.False(new JkMonSettings { CustomTextShadow = false }.Normalized().CustomTextShadow);
+        Assert.True(new JkMonSettings { CustomTextShadow = true }.Normalized().CustomTextShadow);
     }
 
     [Theory]

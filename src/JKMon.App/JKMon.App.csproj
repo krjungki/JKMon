@@ -5,7 +5,6 @@
     <TargetFramework>net10.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
     <AssemblyName>JKMon</AssemblyName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
@@ -13,7 +12,7 @@
     <!-- Background GC trades memory for pause time, which a always-resident monitor does not need. -->
     <ConcurrentGarbageCollector>false</ConcurrentGarbageCollector>
     <TieredCompilationQuickJitForLoops>true</TieredCompilationQuickJitForLoops>
-    <!-- WFO0003 targets WinForms startup; this is a WPF app that only borrows NotifyIcon, so DPI stays in the manifest. -->
+    <!-- WFO0003 wants DPI set from code; it stays in the manifest so it applies before the first window exists. -->
     <NoWarn>$(NoWarn);WFO0003</NoWarn>
   </PropertyGroup>
 
