@@ -75,6 +75,9 @@ public sealed record JkMonSettings
     /// <summary>Fades the overlay out while the pointer is over it so it never hides what is underneath.</summary>
     public bool HideWhenPointerOver { get; init; }
 
+    /// <summary>Hides the overlay and stops sampling while a full-screen app owns the display.</summary>
+    public bool PauseWhenFullscreen { get; init; } = true;
+
     public string TextColor { get; init; } = DefaultTextColor;
 
     public string BackgroundColor { get; init; } = DefaultBackgroundColor;

@@ -1,9 +1,11 @@
 ﻿using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Threading;
+using JKMon.App.Interop;
 using JKMon.App.Update;
 using JKMon.Core;
 using JKMon.Core.Metrics;
+using JKMon.Core.Presentation;
 using JKMon.Core.Settings;
 using JKMon.Core.Sync;
 using JKMon.Core.Update;
@@ -34,6 +36,12 @@ public partial class App : System.Windows.Application
 
     /// <summary>The start-up check ignores the interval, so it must only happen once per run.</summary>
     private bool _checkedThisRun;
+
+    /// <summary>Whether the user wants the overlay shown. Full-screen suppression hides the window without
+    /// changing this, so the tray toggle and the resume both know what to go back to.</summary>
+    private bool _overlayVisible = true;
+
+    private bool _fullscreenSuppressed;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -161,6 +169,12 @@ public partial class App : System.Windows.Application
         _refreshing = true;
         try
         {
+            if (UpdateFullscreenSuppression())
+            {
+                // Nothing is sampled while a full-screen app owns the display, which is the point of pausing.
+                return;
+            }
+
             var model = await _engine.RefreshAsync();
             _overlay.Update(model);
             _tray?.ShowStatus(model);
@@ -181,6 +195,44 @@ public partial class App : System.Windows.Application
         {
             _refreshing = false;
         }
+    }
+
+    /// <summary>Returns true while sampling should stay paused. Only the transitions touch the overlay.</summary>
+    private bool UpdateFullscreenSuppression()
+    {
+        var (isShell, foregroundMonitor, window, bounds) = ForegroundWindowInterop.Foreground();
+        var overlayMonitor = ForegroundWindowInterop.MonitorOf(OverlayWindowInterop.GetHandle(_overlay!));
+
+        var suppress = FullscreenGate.ShouldSuppress(
+            _settings.PauseWhenFullscreen,
+            ForegroundWindowInterop.NotificationState(),
+            isShell,
+            overlayMonitor != IntPtr.Zero && foregroundMonitor == overlayMonitor,
+            window,
+            bounds);
+
+        if (suppress == _fullscreenSuppressed)
+        {
+            return suppress;
+        }
+
+        _fullscreenSuppressed = suppress;
+        if (suppress)
+        {
+            _overlay?.Hide();
+        }
+        else
+        {
+            // The counters accumulated through the pause, so they are re-primed before anything is shown again.
+            _collector?.ResetBaseline();
+            if (_overlayVisible)
+            {
+                _overlay?.Show();
+            }
+        }
+
+        DiagnosticLog.Write($"fullscreen suppression {(suppress ? "on" : "off")}");
+        return suppress;
     }
 
     private void UpdateSettings(JkMonSettings settings)
@@ -215,17 +267,19 @@ public partial class App : System.Windows.Application
             return;
         }
 
-        if (_overlay.IsVisible)
+        _overlayVisible = !_overlayVisible;
+
+        if (!_overlayVisible)
         {
             _overlay.Hide();
         }
-        else
+        else if (!_fullscreenSuppressed)
         {
             _overlay.Show();
             _overlay.ApplySettings(_settings);
         }
 
-        _tray?.Sync(_settings, _overlay.IsVisible);
+        _tray?.Sync(_settings, _overlayVisible);
     }
 
     private void ShowSettings()

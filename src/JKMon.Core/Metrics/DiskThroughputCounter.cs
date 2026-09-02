@@ -63,6 +63,9 @@ internal sealed class DiskThroughputCounter : IDisposable
         return (ReadCounter(_readCounter), ReadCounter(_writeCounter));
     }
 
+    /// <summary>PDH averages over the gap between collections, so a pause has to be followed by a fresh prime.</summary>
+    internal void ResetBaseline() => _primed = false;
+
     private static double ReadCounter(IntPtr counter)
     {
         var format = NativeMethods.PdhFmtDouble | NativeMethods.PdhFmtNoCap100;

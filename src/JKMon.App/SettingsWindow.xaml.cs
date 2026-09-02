@@ -120,6 +120,8 @@ public partial class SettingsWindow : Window
         StartupCheck.Unchecked += (_, _) => Publish();
         HideOnHoverCheck.Checked += (_, _) => Publish();
         HideOnHoverCheck.Unchecked += (_, _) => Publish();
+        FullscreenCheck.Checked += (_, _) => Publish();
+        FullscreenCheck.Unchecked += (_, _) => Publish();
         UpdateNeverRadio.Checked += (_, _) => Publish();
         UpdateDailyRadio.Checked += (_, _) => Publish();
         UpdateWeeklyRadio.Checked += (_, _) => Publish();
@@ -240,6 +242,7 @@ public partial class SettingsWindow : Window
 
             StartupCheck.IsChecked = normalized.StartWithWindows;
             HideOnHoverCheck.IsChecked = normalized.HideWhenPointerOver;
+            FullscreenCheck.IsChecked = normalized.PauseWhenFullscreen;
             UpdateNeverRadio.IsChecked = normalized.UpdateCheck == UpdateCheckFrequency.Never;
             UpdateDailyRadio.IsChecked = normalized.UpdateCheck == UpdateCheckFrequency.Daily;
             UpdateWeeklyRadio.IsChecked = normalized.UpdateCheck == UpdateCheckFrequency.Weekly;
@@ -318,6 +321,7 @@ public partial class SettingsWindow : Window
             : string.Empty,
         StartWithWindows = StartupCheck.IsChecked == true,
         HideWhenPointerOver = HideOnHoverCheck.IsChecked == true,
+        PauseWhenFullscreen = FullscreenCheck.IsChecked == true,
         ProviderOrder = _providerOrder.ToList(),
         UpdateCheck = UpdateDailyRadio.IsChecked == true ? UpdateCheckFrequency.Daily
             : UpdateWeeklyRadio.IsChecked == true ? UpdateCheckFrequency.Weekly

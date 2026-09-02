@@ -515,6 +515,11 @@
                               ToolTip="Useful with Always on top so the overlay never covers what you are reading"
                               Margin="110,6,0,0" />
 
+                    <CheckBox x:Name="FullscreenCheck"
+                              Content="Hide and pause during full screen apps"
+                              ToolTip="전체화면 영상이나 게임 중에는 오버레이를 숨기고 측정도 멈춰 자원을 쓰지 않는다"
+                              Margin="110,6,0,0" />
+
                     <Grid Margin="0,10,0,8">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="110" />

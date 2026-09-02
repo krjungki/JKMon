@@ -71,6 +71,9 @@ internal sealed class CpuCoreCounter : IDisposable
         return values;
     }
 
+    /// <summary>PDH averages over the gap between collections, so a pause has to be followed by a fresh prime.</summary>
+    internal void ResetBaseline() => _primed = false;
+
     private static double ReadCounter(IntPtr counter)
     {
         if (NativeMethods.PdhGetFormattedCounterValue(counter, NativeMethods.PdhFmtDouble, IntPtr.Zero, out var value)

@@ -23,6 +23,17 @@ public sealed class SystemMetricsCollector : IDisposable
         return previous is null ? MetricsSnapshot.Empty : RateMath.Compose(previous.Value, current, cores);
     }
 
+    /// <summary>
+    /// Forgets the last sample so the next read starts a fresh interval. Without this, resuming after a pause would
+    /// divide a whole pause worth of counters by one interval and report a rate that never happened.
+    /// </summary>
+    public void ResetBaseline()
+    {
+        _previous = null;
+        _cores.ResetBaseline();
+        _disk.ResetBaseline();
+    }
+
     private MetricSample Sample()
     {
         ulong idle = 0, kernel = 0, user = 0;
