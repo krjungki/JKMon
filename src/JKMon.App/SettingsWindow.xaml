@@ -488,7 +488,10 @@
                         </StackPanel>
                     </Grid>
 
-                    <CheckBox x:Name="UpdateStartupCheck" Content="Also check when the app starts" Margin="110,0,0,0" />
+                    <CheckBox x:Name="UpdateStartupCheck"
+                              Content="Also check when the app starts"
+                              ToolTip="주기와 상관없이 앱을 켤 때마다 확인한다"
+                              Margin="110,0,0,0" />
 
                     <TextBlock x:Name="DataRootText"
                                Margin="110,6,0,0"

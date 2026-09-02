@@ -23,10 +23,11 @@ public static class UpdateSchedule
     /// <summary>
     /// One decision for every caller, so launching the app cannot sneak past the user's start-up preference.
     ///
-    /// <paramref name="checkAtStartup"/> off means a launch must never trigger a check, so the wait is measured
-    /// from whichever is later, the last check or this run's start. The app then only checks after a full interval
-    /// of actually running. With the switch on, the wait is measured from the last check alone, so a launch after a
-    /// long gap checks immediately.
+    /// <paramref name="checkAtStartup"/> on is a promise that starting the app checks, so the first check of a run
+    /// ignores the interval entirely. Later checks in the same run wait for the interval from the last check.
+    ///
+    /// With the switch off a launch must never trigger a check, so the wait is measured from whichever is later,
+    /// the last check or this run's start. The app then only checks after a full interval of actually running.
     ///
     /// <paramref name="lastCheckUtc"/> of default means the app has never checked.
     /// </summary>
@@ -35,14 +36,15 @@ public static class UpdateSchedule
         DateTimeOffset lastCheckUtc,
         DateTimeOffset appStartedUtc,
         DateTimeOffset nowUtc,
-        bool checkAtStartup)
+        bool checkAtStartup,
+        bool alreadyCheckedThisRun)
     {
         if (frequency == UpdateCheckFrequency.Never)
         {
             return false;
         }
 
-        if (checkAtStartup && lastCheckUtc == default)
+        if (checkAtStartup && !alreadyCheckedThisRun)
         {
             return true;
         }

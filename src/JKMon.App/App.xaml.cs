@@ -32,6 +32,9 @@ public partial class App : System.Windows.Application
     /// <summary>Not persisted: a restart is a deliberate act and may retry immediately.</summary>
     private DateTimeOffset _retryNotBefore = DateTimeOffset.MinValue;
 
+    /// <summary>The start-up check ignores the interval, so it must only happen once per run.</summary>
+    private bool _checkedThisRun;
+
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
@@ -89,7 +92,7 @@ public partial class App : System.Windows.Application
 
         _ = RefreshAsync();
 
-        if (UpdateService.IsDue(_settings, _startedUtc))
+        if (UpdateService.IsDue(_settings, _startedUtc, _checkedThisRun))
         {
             _ = CheckForUpdatesAsync(manual: false);
         }
@@ -103,12 +106,14 @@ public partial class App : System.Windows.Application
             return;
         }
 
-        if (!manual && (DateTimeOffset.UtcNow < _retryNotBefore || !UpdateService.IsDue(_settings, _startedUtc)))
+        if (!manual && (DateTimeOffset.UtcNow < _retryNotBefore
+            || !UpdateService.IsDue(_settings, _startedUtc, _checkedThisRun)))
         {
             return;
         }
 
         _updating = true;
+        _checkedThisRun = true;
         try
         {
             using var service = new UpdateService();
@@ -162,7 +167,7 @@ public partial class App : System.Windows.Application
             _presentProviders = [.. model.Circles.Select(circle => circle.ProviderId)];
             _settingsWindow?.SetPresentProviders(_presentProviders);
 
-            if (UpdateService.IsDue(_settings, _startedUtc))
+            if (UpdateService.IsDue(_settings, _startedUtc, _checkedThisRun))
             {
                 _ = CheckForUpdatesAsync(manual: false);
             }

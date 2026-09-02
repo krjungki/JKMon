@@ -15,8 +15,39 @@ public class UpdateCheckTests
     [Fact]
     public void Schedule_NeverBlocksEveryAutomaticCheck()
     {
-        Assert.False(UpdateSchedule.IsDue(UpdateCheckFrequency.Never, default, JustStarted, Now, checkAtStartup: true));
-        Assert.False(UpdateSchedule.IsDue(UpdateCheckFrequency.Never, default, JustStarted, Now, checkAtStartup: false));
+        Assert.False(UpdateSchedule.IsDue(UpdateCheckFrequency.Never, default, JustStarted, Now, true, false));
+        Assert.False(UpdateSchedule.IsDue(UpdateCheckFrequency.Never, default, JustStarted, Now, false, false));
+    }
+
+    /// <summary>
+    /// The switch says the app checks when it starts, so it has to mean that literally. Obeying the interval here
+    /// made a restart do nothing when a check had run minutes earlier, which is exactly what a user reported.
+    /// </summary>
+    [Fact]
+    public void Schedule_StartupCheckIgnoresTheInterval()
+    {
+        var minutesAgo = Now.AddMinutes(-24);
+
+        Assert.True(UpdateSchedule.IsDue(
+            UpdateCheckFrequency.Daily, minutesAgo, JustStarted, Now, checkAtStartup: true, alreadyCheckedThisRun: false));
+    }
+
+    [Fact]
+    public void Schedule_StartupCheckHappensOnlyOncePerRun()
+    {
+        var minutesAgo = Now.AddMinutes(-24);
+
+        Assert.False(UpdateSchedule.IsDue(
+            UpdateCheckFrequency.Daily, minutesAgo, JustStarted, Now, checkAtStartup: true, alreadyCheckedThisRun: true));
+    }
+
+    [Fact]
+    public void Schedule_AfterTheStartupCheckTheIntervalTakesOver()
+    {
+        var dayAgo = Now.AddHours(-25);
+
+        Assert.True(UpdateSchedule.IsDue(
+            UpdateCheckFrequency.Daily, dayAgo, JustStarted, Now, checkAtStartup: true, alreadyCheckedThisRun: true));
     }
 
     /// <summary>
@@ -28,8 +59,7 @@ public class UpdateCheckTests
     {
         var longAgo = Now.AddDays(-30);
 
-        Assert.False(UpdateSchedule.IsDue(UpdateCheckFrequency.Daily, longAgo, JustStarted, Now, checkAtStartup: false));
-        Assert.True(UpdateSchedule.IsDue(UpdateCheckFrequency.Daily, longAgo, JustStarted, Now, checkAtStartup: true));
+        Assert.False(UpdateSchedule.IsDue(UpdateCheckFrequency.Daily, longAgo, JustStarted, Now, false, false));
     }
 
     [Fact]
@@ -38,19 +68,19 @@ public class UpdateCheckTests
         var started = Now.AddHours(-25);
         var lastCheck = Now.AddDays(-30);
 
-        Assert.True(UpdateSchedule.IsDue(UpdateCheckFrequency.Daily, lastCheck, started, Now, checkAtStartup: false));
+        Assert.True(UpdateSchedule.IsDue(UpdateCheckFrequency.Daily, lastCheck, started, Now, false, false));
     }
 
     [Fact]
     public void Schedule_WithTheSwitchOffAFreshInstallStillWaits()
     {
-        Assert.False(UpdateSchedule.IsDue(UpdateCheckFrequency.Weekly, default, JustStarted, Now, checkAtStartup: false));
+        Assert.False(UpdateSchedule.IsDue(UpdateCheckFrequency.Weekly, default, JustStarted, Now, false, false));
     }
 
     [Fact]
     public void Schedule_FirstCheckIsDueAtStartupWhenTheSwitchIsOn()
     {
-        Assert.True(UpdateSchedule.IsDue(UpdateCheckFrequency.Weekly, default, JustStarted, Now, checkAtStartup: true));
+        Assert.True(UpdateSchedule.IsDue(UpdateCheckFrequency.Weekly, default, JustStarted, Now, true, false));
     }
 
     [Theory]
@@ -63,8 +93,8 @@ public class UpdateCheckTests
         var last = Now.AddHours(-hoursSince);
         var started = Now.AddDays(-60);
 
-        Assert.Equal(expected, UpdateSchedule.IsDue(frequency, last, started, Now, checkAtStartup: false));
-        Assert.Equal(expected, UpdateSchedule.IsDue(frequency, last, started, Now, checkAtStartup: true));
+        Assert.Equal(expected, UpdateSchedule.IsDue(frequency, last, started, Now, false, true));
+        Assert.Equal(expected, UpdateSchedule.IsDue(frequency, last, started, Now, true, true));
     }
 
     [Fact]
@@ -73,7 +103,7 @@ public class UpdateCheckTests
         var last = Now.AddDays(5);
         var started = Now.AddDays(-60);
 
-        Assert.True(UpdateSchedule.IsDue(UpdateCheckFrequency.Daily, last, started, Now, checkAtStartup: false));
+        Assert.True(UpdateSchedule.IsDue(UpdateCheckFrequency.Daily, last, started, Now, false, true));
     }
 
     [Fact]
