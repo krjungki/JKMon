@@ -53,6 +53,8 @@ public partial class App : System.Windows.Application
         // Hardware rendering makes this process hold a Direct3D device and the display driver's user-mode DLLs for
         // as long as it runs. On a laptop with switchable graphics that is a resident claim on the current adapter,
         // and it is worth nothing here: the overlay is a per-pixel alpha layered window of text and a few shapes.
+        // Measured: this drops a few driver modules but WPF still creates a D3D9 device and keeps the display
+        // driver's user-mode DLLs loaded, so it does not release the adapter on switchable-graphics laptops.
         RenderOptions.ProcessRenderMode = RenderMode.SoftwareOnly;
 
         var arguments = UpdateArguments.Parse(e.Args);

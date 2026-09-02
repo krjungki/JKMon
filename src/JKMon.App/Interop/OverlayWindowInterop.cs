@@ -112,7 +112,16 @@ internal static class OverlayWindowInterop
     /// Keeps the window at the bottom of the z-order by editing the pending WINDOWPOS. Calling SetWindowPos from
     /// inside WM_WINDOWPOSCHANGING cancels the move that triggered the message.
     /// </summary>
-    internal static void PinToBottom(IntPtr lParam)
+    internal static void PinToBottom(IntPtr lParam) => Pin(lParam, HwndBottom);
+
+    /// <summary>
+    /// The same treatment for the top. WPF recomputes the z-order from its own Topmost property whenever it moves
+    /// or resizes the window, and the overlay resizes as its readings change width, so setting the style once is
+    /// not enough: every position change would drop the window out of the topmost band again.
+    /// </summary>
+    internal static void PinToTop(IntPtr lParam) => Pin(lParam, HwndTopMost);
+
+    private static void Pin(IntPtr lParam, IntPtr insertAfter)
     {
         if (lParam == IntPtr.Zero)
         {
@@ -120,7 +129,7 @@ internal static class OverlayWindowInterop
         }
 
         var position = Marshal.PtrToStructure<WindowPos>(lParam);
-        position.HwndInsertAfter = HwndBottom;
+        position.HwndInsertAfter = insertAfter;
         position.Flags &= ~SwpNoZOrder;
         Marshal.StructureToPtr(position, lParam, fDeleteOld: false);
     }
@@ -162,4 +171,9 @@ internal static class OverlayWindowInterop
             SetWindowPos(hwnd, HwndBottom, 0, 0, 0, 0, SwpNoMove | SwpNoSize | SwpNoActivate);
         }
     }
+
+    private const int WsExTopMost = 0x00000008;
+
+    internal static bool IsTopMost(IntPtr hwnd) =>
+        hwnd != IntPtr.Zero && (GetWindowLong(hwnd, GwlExStyle) & WsExTopMost) != 0;
 }

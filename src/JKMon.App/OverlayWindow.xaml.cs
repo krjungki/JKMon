@@ -89,8 +89,7 @@ public partial class OverlayWindow : Window
         Circles.Margin = new Thickness(Math.Round(_settings.FontSize * 1.1), 0, 0, 0);
 
         _lastCircles = [];
-        var hwnd = OverlayWindowInterop.GetHandle(this);
-        OverlayWindowInterop.ApplyLayer(hwnd, _settings.Layer);
+        ApplyLayer();
         ResizeAndReposition();
         ApplyPointerWatch();
     }
@@ -181,8 +180,38 @@ public partial class OverlayWindow : Window
         _ => _settings.ActivityIdleColor
     };
 
+    /// <summary>
+    /// WPF owns the topmost flag through <see cref="Window.Topmost"/>; setting only the window style behind its
+    /// back leaves the framework free to clear it whenever it repositions the window. A user reported the overlay
+    /// coming up without it after a reboot, so the flag is also re-asserted on every refresh if something drops it.
+    /// </summary>
+    private void ApplyLayer()
+    {
+        Topmost = _settings.Layer == WindowLayer.AlwaysOnTop;
+        OverlayWindowInterop.ApplyLayer(OverlayWindowInterop.GetHandle(this), _settings.Layer);
+    }
+
+    private void EnsureLayer()
+    {
+        var hwnd = OverlayWindowInterop.GetHandle(this);
+        if (hwnd == IntPtr.Zero)
+        {
+            return;
+        }
+
+        var wanted = _settings.Layer == WindowLayer.AlwaysOnTop;
+        if (OverlayWindowInterop.IsTopMost(hwnd) == wanted)
+        {
+            return;
+        }
+
+        DiagnosticLog.Write($"layer corrected: wanted {_settings.Layer}, window was not");
+        ApplyLayer();
+    }
+
     public void Update(OverlayModel model)
     {
+        EnsureLayer();
         _cpuGauge?.Set(model.CpuPercent, model.Cpu);
         _memoryGauge?.Set(model.MemoryPercent, model.Memory);
         CpuHost.ToolTip = $"CPU {model.Cpu}";
@@ -550,7 +579,7 @@ public partial class OverlayWindow : Window
     {
         var hwnd = OverlayWindowInterop.GetHandle(this);
         OverlayWindowInterop.ApplyOverlayStyles(hwnd);
-        OverlayWindowInterop.ApplyLayer(hwnd, _settings.Layer);
+        ApplyLayer();
 
         HwndSource.FromHwnd(hwnd)?.AddHook(WndProc);
         ResizeAndReposition();
@@ -563,14 +592,23 @@ public partial class OverlayWindow : Window
             case OverlayWindowInterop.WmDpiChanged:
             case OverlayWindowInterop.WmDisplayChange:
             case OverlayWindowInterop.WmSettingChange:
-                // The taskbar can move or change size, which redefines the work area.
-                Dispatcher.BeginInvoke(ResizeAndReposition);
+                // The taskbar can move or change size, which redefines the work area. A shell that starts or
+                // restarts after this window also rearranges the z-order, so the layer is re-asserted with it.
+                Dispatcher.BeginInvoke(() =>
+                {
+                    EnsureLayer();
+                    ResizeAndReposition();
+                });
                 break;
 
             case OverlayWindowInterop.WmWindowPosChanging:
                 if (_settings.Layer == WindowLayer.Desktop)
                 {
                     OverlayWindowInterop.PinToBottom(lParam);
+                }
+                else
+                {
+                    OverlayWindowInterop.PinToTop(lParam);
                 }
 
                 break;

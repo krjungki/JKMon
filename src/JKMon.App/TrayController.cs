@@ -1,5 +1,6 @@
 using System.Text;
 using System.Windows.Forms;
+using JKMon.App.Update;
 using JKMon.Core.Presentation;
 using JKMon.Core.Settings;
 
@@ -53,6 +54,7 @@ internal sealed class TrayController : IDisposable
         menu.Items.Add(_topLayerItem);
         menu.Items.Add(refreshMenu);
         menu.Items.Add(new ToolStripSeparator());
+        menu.Items.Add(new ToolStripMenuItem($"버전 {UpdateService.Current}") { Enabled = false });
         menu.Items.Add(new ToolStripMenuItem("Exit", null, (_, _) => ExitRequested?.Invoke()));
 
         _icon = new NotifyIcon
