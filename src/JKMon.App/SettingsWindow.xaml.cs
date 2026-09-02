@@ -85,12 +85,6 @@ public partial class SettingsWindow : Window
         CaptionRightRadio.Checked += (_, _) => Publish();
         TextColorBox.TextChanged += (_, _) => Publish();
         BackColorBox.TextChanged += (_, _) => Publish();
-        NetInColorBox.TextChanged += (_, _) => Publish();
-        NetOutColorBox.TextChanged += (_, _) => Publish();
-        DiskReadColorBox.TextChanged += (_, _) => Publish();
-        DiskWriteColorBox.TextChanged += (_, _) => Publish();
-        DirectionColorCheck.Checked += (_, _) => Publish();
-        DirectionColorCheck.Unchecked += (_, _) => Publish();
         CpuNumberRadio.Checked += (_, _) => Publish();
         CpuBarRadio.Checked += (_, _) => Publish();
         MemoryNumberRadio.Checked += (_, _) => Publish();
@@ -135,6 +129,18 @@ public partial class SettingsWindow : Window
         OrderUpButton.Click += (_, _) => MoveProvider(-1);
         OrderDownButton.Click += (_, _) => MoveProvider(1);
 
+        ActivityBarCheck.Checked += (_, _) => Publish();
+        ActivityBarCheck.Unchecked += (_, _) => Publish();
+        foreach (var box in ThresholdBoxes)
+        {
+            box.TextChanged += (_, _) => Publish();
+        }
+
+        foreach (var box in (TextBox[])[ActivityIdleColorBox, ActivityNormalColorBox, ActivityElevatedColorBox, ActivityHighColorBox])
+        {
+            box.TextChanged += (_, _) => Publish();
+        }
+
         ResetButton.Click += (_, _) =>
         {
             Load(new JkMonSettings());
@@ -149,10 +155,10 @@ public partial class SettingsWindow : Window
         WirePicker(OutlineColorSwatch, OutlineColorBox, JkMonSettings.DefaultGaugeOutlineColor);
         WirePicker(CpuGaugeColorSwatch, CpuGaugeColorBox, JkMonSettings.DefaultCpuGaugeColor);
         WirePicker(MemoryGaugeColorSwatch, MemoryGaugeColorBox, JkMonSettings.DefaultMemoryGaugeColor);
-        WirePicker(NetOutColorSwatch, NetOutColorBox, JkMonSettings.DefaultNetworkOutColor);
-        WirePicker(NetInColorSwatch, NetInColorBox, JkMonSettings.DefaultNetworkInColor);
-        WirePicker(DiskReadColorSwatch, DiskReadColorBox, JkMonSettings.DefaultDiskReadColor);
-        WirePicker(DiskWriteColorSwatch, DiskWriteColorBox, JkMonSettings.DefaultDiskWriteColor);
+        WirePicker(ActivityIdleColorSwatch, ActivityIdleColorBox, JkMonSettings.DefaultActivityIdleColor);
+        WirePicker(ActivityNormalColorSwatch, ActivityNormalColorBox, JkMonSettings.DefaultActivityNormalColor);
+        WirePicker(ActivityElevatedColorSwatch, ActivityElevatedColorBox, JkMonSettings.DefaultActivityElevatedColor);
+        WirePicker(ActivityHighColorSwatch, ActivityHighColorBox, JkMonSettings.DefaultActivityHighColor);
     }
 
     /// <summary>Writing the pick back into the box reuses its TextChanged handler, so the overlay updates itself.</summary>
@@ -192,13 +198,17 @@ public partial class SettingsWindow : Window
             CaptionCenterRadio.IsChecked = normalized.CustomTextAlignment == CaptionAlignment.Center;
             CaptionRightRadio.IsChecked = normalized.CustomTextAlignment == CaptionAlignment.Right;
             CaptionShadowCheck.IsChecked = normalized.CustomTextShadow;
+            ActivityBarCheck.IsChecked = normalized.ShowActivityBars;
+            ActivityIdleColorBox.Text = normalized.ActivityIdleColor;
+            ActivityNormalColorBox.Text = normalized.ActivityNormalColor;
+            ActivityElevatedColorBox.Text = normalized.ActivityElevatedColor;
+            ActivityHighColorBox.Text = normalized.ActivityHighColor;
+            NetFirstThresholdBox.Text = normalized.NetworkFirstThresholdKib.ToString("0.#", CultureInfo.InvariantCulture);
+            NetSecondThresholdBox.Text = normalized.NetworkSecondThresholdKib.ToString("0.#", CultureInfo.InvariantCulture);
+            DiskFirstThresholdBox.Text = normalized.DiskFirstThresholdKib.ToString("0.#", CultureInfo.InvariantCulture);
+            DiskSecondThresholdBox.Text = normalized.DiskSecondThresholdKib.ToString("0.#", CultureInfo.InvariantCulture);
             TextColorBox.Text = normalized.TextColor;
             BackColorBox.Text = normalized.BackgroundColor;
-            NetInColorBox.Text = normalized.NetworkInColor;
-            NetOutColorBox.Text = normalized.NetworkOutColor;
-            DiskReadColorBox.Text = normalized.DiskReadColor;
-            DiskWriteColorBox.Text = normalized.DiskWriteColor;
-            DirectionColorCheck.IsChecked = normalized.UseDirectionColors;
             CpuNumberRadio.IsChecked = normalized.CpuGauge == CpuGaugeStyle.Number;
             CpuBarRadio.IsChecked = normalized.CpuGauge == CpuGaugeStyle.Bar;
             MemoryNumberRadio.IsChecked = normalized.MemoryGauge == MemoryGaugeStyle.Number;
@@ -270,11 +280,6 @@ public partial class SettingsWindow : Window
             : CaptionAlignment.Center,
         TextColor = TextColorBox.Text,
         BackgroundColor = BackColorBox.Text,
-        NetworkInColor = NetInColorBox.Text,
-        NetworkOutColor = NetOutColorBox.Text,
-        DiskReadColor = DiskReadColorBox.Text,
-        DiskWriteColor = DiskWriteColorBox.Text,
-        UseDirectionColors = DirectionColorCheck.IsChecked == true,
         CpuGauge = CpuBarRadio.IsChecked == true ? CpuGaugeStyle.Bar : CpuGaugeStyle.Number,
         MemoryGauge = MemoryBarRadio.IsChecked == true ? MemoryGaugeStyle.Bar
             : MemoryPieRadio.IsChecked == true ? MemoryGaugeStyle.Pie
@@ -293,6 +298,15 @@ public partial class SettingsWindow : Window
         BoldText = BoldCheck.IsChecked == true,
         TextShadow = ShadowCheck.IsChecked == true,
         CustomTextShadow = CaptionShadowCheck.IsChecked == true,
+        ShowActivityBars = ActivityBarCheck.IsChecked == true,
+        ActivityIdleColor = ActivityIdleColorBox.Text,
+        ActivityNormalColor = ActivityNormalColorBox.Text,
+        ActivityElevatedColor = ActivityElevatedColorBox.Text,
+        ActivityHighColor = ActivityHighColorBox.Text,
+        NetworkFirstThresholdKib = ParsedThreshold(NetFirstThresholdBox, 1024),
+        NetworkSecondThresholdKib = ParsedThreshold(NetSecondThresholdBox, 10 * 1024),
+        DiskFirstThresholdKib = ParsedThreshold(DiskFirstThresholdBox, 5 * 1024),
+        DiskSecondThresholdKib = ParsedThreshold(DiskSecondThresholdBox, 50 * 1024),
         RefreshSeconds = (int)Math.Round(RefreshSlider.Value),
         MarginPixels = (int)Math.Round(MarginSlider.Value),
         Layer = TopRadio.IsChecked == true ? WindowLayer.AlwaysOnTop : WindowLayer.Desktop,
@@ -311,6 +325,12 @@ public partial class SettingsWindow : Window
         CheckUpdatesOnStartup = UpdateStartupCheck.IsChecked == true,
         LastUpdateCheckUtc = _lastUpdateCheckUtc
     }.Normalized();
+
+    private TextBox[] ThresholdBoxes =>
+        [NetFirstThresholdBox, NetSecondThresholdBox, DiskFirstThresholdBox, DiskSecondThresholdBox];
+
+    private static double ParsedThreshold(TextBox box, double fallback) =>
+        double.TryParse(box.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var value) ? value : fallback;
 
     private void ShowProviderOrder(int selected)
     {
@@ -358,8 +378,8 @@ public partial class SettingsWindow : Window
 
     private void UpdateReadouts()
     {
-        DirectionColorRows.IsEnabled = DirectionColorCheck.IsChecked == true;
         UpdateStartupCheck.IsEnabled = UpdateNeverRadio.IsChecked != true;
+        ActivityRows.IsEnabled = ActivityBarCheck.IsChecked == true;
 
         // Per-core bars take the place of the aggregate gauge, so its style no longer applies.
         var aggregateCpu = CoresCheck.IsChecked != true;
@@ -379,10 +399,10 @@ public partial class SettingsWindow : Window
         TextColorSwatch.Background = SwatchFor(TextColorBox.Text, JkMonSettings.DefaultTextColor);
         CustomColorSwatch.Background = SwatchFor(CustomColorBox.Text, JkMonSettings.DefaultCustomTextColor);
         BackColorSwatch.Background = SwatchFor(BackColorBox.Text, JkMonSettings.DefaultBackgroundColor);
-        NetInColorSwatch.Background = SwatchFor(NetInColorBox.Text, JkMonSettings.DefaultNetworkInColor);
-        NetOutColorSwatch.Background = SwatchFor(NetOutColorBox.Text, JkMonSettings.DefaultNetworkOutColor);
-        DiskReadColorSwatch.Background = SwatchFor(DiskReadColorBox.Text, JkMonSettings.DefaultDiskReadColor);
-        DiskWriteColorSwatch.Background = SwatchFor(DiskWriteColorBox.Text, JkMonSettings.DefaultDiskWriteColor);
+        ActivityIdleColorSwatch.Background = SwatchFor(ActivityIdleColorBox.Text, JkMonSettings.DefaultActivityIdleColor);
+        ActivityNormalColorSwatch.Background = SwatchFor(ActivityNormalColorBox.Text, JkMonSettings.DefaultActivityNormalColor);
+        ActivityElevatedColorSwatch.Background = SwatchFor(ActivityElevatedColorBox.Text, JkMonSettings.DefaultActivityElevatedColor);
+        ActivityHighColorSwatch.Background = SwatchFor(ActivityHighColorBox.Text, JkMonSettings.DefaultActivityHighColor);
         OutlineColorSwatch.Background = SwatchFor(OutlineColorBox.Text, JkMonSettings.DefaultGaugeOutlineColor);
         CpuGaugeColorSwatch.Background = SwatchFor(CpuGaugeColorBox.Text, JkMonSettings.DefaultCpuGaugeColor);
         MemoryGaugeColorSwatch.Background = SwatchFor(MemoryGaugeColorBox.Text, JkMonSettings.DefaultMemoryGaugeColor);

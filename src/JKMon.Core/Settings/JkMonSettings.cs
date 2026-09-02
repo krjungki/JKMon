@@ -44,14 +44,18 @@ public sealed record JkMonSettings
     public const string DefaultFontFamily = "Segoe UI";
     public const string DefaultCustomTextColor = "#E6EAF0";
 
-    public const string DefaultNetworkInColor = "#5BC8FF";
-    public const string DefaultNetworkOutColor = "#7CE38B";
-    public const string DefaultDiskReadColor = "#FFC857";
-    public const string DefaultDiskWriteColor = "#FF8A5B";
-
     public const string DefaultGaugeOutlineColor = "#2F81F7";
     public const string DefaultCpuGaugeColor = "#35FF6A";
     public const string DefaultMemoryGaugeColor = "#C77DFF";
+
+    public const string DefaultActivityIdleColor = "#6B7280";
+    public const string DefaultActivityNormalColor = "#35FF6A";
+    public const string DefaultActivityElevatedColor = "#FFC857";
+    public const string DefaultActivityHighColor = "#FF5B5B";
+
+    /// <summary>Thresholds are edited in KiB/s because bytes per second is an awkward number to type.</summary>
+    public const double MinActivityThresholdKib = 1;
+    public const double MaxActivityThresholdKib = 1024d * 1024;
 
     public int RefreshSeconds { get; init; } = 2;
 
@@ -74,18 +78,6 @@ public sealed record JkMonSettings
     public string TextColor { get; init; } = DefaultTextColor;
 
     public string BackgroundColor { get; init; } = DefaultBackgroundColor;
-
-    /// <summary>Colours of the direction indicators that replace the network and storage labels.</summary>
-    public string NetworkInColor { get; init; } = DefaultNetworkInColor;
-
-    public string NetworkOutColor { get; init; } = DefaultNetworkOutColor;
-
-    public string DiskReadColor { get; init; } = DefaultDiskReadColor;
-
-    public string DiskWriteColor { get; init; } = DefaultDiskWriteColor;
-
-    /// <summary>When off the network and storage rows fall back to the common text colour.</summary>
-    public bool UseDirectionColors { get; init; } = true;
 
     public CpuGaugeStyle CpuGauge { get; init; } = CpuGaugeStyle.Number;
 
@@ -110,17 +102,32 @@ public sealed record JkMonSettings
     /// <summary>Adds one small bar per logical processor beside the CPU gauge.</summary>
     public bool ShowIndividualCores { get; init; }
 
-    [JsonIgnore]
-    public string EffectiveNetworkInColor => UseDirectionColors ? NetworkInColor : TextColor;
+    /// <summary>Names the network and storage columns and shows how busy each one is.</summary>
+    public bool ShowActivityBars { get; init; } = true;
+
+    public string ActivityIdleColor { get; init; } = DefaultActivityIdleColor;
+
+    public string ActivityNormalColor { get; init; } = DefaultActivityNormalColor;
+
+    public string ActivityElevatedColor { get; init; } = DefaultActivityElevatedColor;
+
+    public string ActivityHighColor { get; init; } = DefaultActivityHighColor;
+
+    /// <summary>Combined in and out rate, in KiB/s, at which the bar leaves its normal colour.</summary>
+    public double NetworkFirstThresholdKib { get; init; } = 1024;
+
+    public double NetworkSecondThresholdKib { get; init; } = 10 * 1024;
+
+    public double DiskFirstThresholdKib { get; init; } = 5 * 1024;
+
+    public double DiskSecondThresholdKib { get; init; } = 50 * 1024;
 
     [JsonIgnore]
-    public string EffectiveNetworkOutColor => UseDirectionColors ? NetworkOutColor : TextColor;
-
-    [JsonIgnore]
-    public string EffectiveDiskReadColor => UseDirectionColors ? DiskReadColor : TextColor;
-
-    [JsonIgnore]
-    public string EffectiveDiskWriteColor => UseDirectionColors ? DiskWriteColor : TextColor;
+    public ActivityThresholds ActivityThresholds => new(
+        NetworkFirstThresholdKib * 1024,
+        NetworkSecondThresholdKib * 1024,
+        DiskFirstThresholdKib * 1024,
+        DiskSecondThresholdKib * 1024);
 
     /// <summary>0 renders the panel fully transparent, 100 fully opaque.</summary>
     public int BackgroundOpacityPercent { get; init; } = 45;
@@ -174,10 +181,6 @@ public sealed record JkMonSettings
         MonitorDeviceName = string.IsNullOrWhiteSpace(MonitorDeviceName) ? string.Empty : MonitorDeviceName.Trim(),
         TextColor = ValidColor(TextColor, DefaultTextColor),
         BackgroundColor = ValidColor(BackgroundColor, DefaultBackgroundColor),
-        NetworkInColor = ValidColor(NetworkInColor, DefaultNetworkInColor),
-        NetworkOutColor = ValidColor(NetworkOutColor, DefaultNetworkOutColor),
-        DiskReadColor = ValidColor(DiskReadColor, DefaultDiskReadColor),
-        DiskWriteColor = ValidColor(DiskWriteColor, DefaultDiskWriteColor),
         CpuGauge = Enum.IsDefined(CpuGauge) ? CpuGauge : CpuGaugeStyle.Number,
         MemoryGauge = Enum.IsDefined(MemoryGauge) ? MemoryGauge : MemoryGaugeStyle.Number,
         GaugeOutlineColor = ValidColor(GaugeOutlineColor, DefaultGaugeOutlineColor),
@@ -189,6 +192,18 @@ public sealed record JkMonSettings
             GaugeLabelFontSize, MinGaugeLabelFontSize, MaxGaugeLabelFontSize, 9),
         GaugeCaptionFontSize = ClampDouble(
             GaugeCaptionFontSize, MinGaugeCaptionFontSize, MaxGaugeCaptionFontSize, 9),
+        ActivityIdleColor = ValidColor(ActivityIdleColor, DefaultActivityIdleColor),
+        ActivityNormalColor = ValidColor(ActivityNormalColor, DefaultActivityNormalColor),
+        ActivityElevatedColor = ValidColor(ActivityElevatedColor, DefaultActivityElevatedColor),
+        ActivityHighColor = ValidColor(ActivityHighColor, DefaultActivityHighColor),
+        NetworkFirstThresholdKib = ClampDouble(
+            NetworkFirstThresholdKib, MinActivityThresholdKib, MaxActivityThresholdKib, 1024),
+        NetworkSecondThresholdKib = ClampDouble(
+            NetworkSecondThresholdKib, MinActivityThresholdKib, MaxActivityThresholdKib, 10 * 1024),
+        DiskFirstThresholdKib = ClampDouble(
+            DiskFirstThresholdKib, MinActivityThresholdKib, MaxActivityThresholdKib, 5 * 1024),
+        DiskSecondThresholdKib = ClampDouble(
+            DiskSecondThresholdKib, MinActivityThresholdKib, MaxActivityThresholdKib, 50 * 1024),
         BackgroundOpacityPercent = Clamp(BackgroundOpacityPercent, 0, 100, 45),
         FontFamily = string.IsNullOrWhiteSpace(FontFamily) ? DefaultFontFamily : FontFamily.Trim(),
         FontSize = ClampDouble(FontSize, MinFontSize, MaxFontSize, 13),

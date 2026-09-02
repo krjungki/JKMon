@@ -307,13 +307,13 @@
 
                 <StackPanel Grid.Column="2">
 
-                    <TextBlock Text="INDICATOR COLOURS" Style="{StaticResource Heading}" Margin="0,0,0,6" />
+                    <TextBlock Text="ACTIVITY BARS" Style="{StaticResource Heading}" Margin="0,0,0,6" />
 
-                    <CheckBox x:Name="DirectionColorCheck"
-                              Content="Colour the network and storage rows by direction"
+                    <CheckBox x:Name="ActivityBarCheck"
+                              Content="Name the Net and Disk columns and show how busy they are"
                               Margin="0,0,0,8" />
 
-                    <StackPanel x:Name="DirectionColorRows">
+                    <StackPanel x:Name="ActivityRows">
 
                         <Grid Margin="0,0,0,8">
                             <Grid.ColumnDefinitions>
@@ -321,9 +321,9 @@
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="34" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="Network out &#x25B2;" />
-                            <TextBox Grid.Column="1" x:Name="NetOutColorBox" />
-                            <Button Grid.Column="2" x:Name="NetOutColorSwatch" Style="{StaticResource Swatch}" />
+                            <TextBlock Grid.Column="0" Text="Idle" ToolTip="합산 전송량이 0일 때" />
+                            <TextBox Grid.Column="1" x:Name="ActivityIdleColorBox" />
+                            <Button Grid.Column="2" x:Name="ActivityIdleColorSwatch" Style="{StaticResource Swatch}" />
                         </Grid>
 
                         <Grid Margin="0,0,0,8">
@@ -332,9 +332,9 @@
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="34" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="Network in &#x25BC;" />
-                            <TextBox Grid.Column="1" x:Name="NetInColorBox" />
-                            <Button Grid.Column="2" x:Name="NetInColorSwatch" Style="{StaticResource Swatch}" />
+                            <TextBlock Grid.Column="0" Text="Normal" ToolTip="1차 임계값 미만" />
+                            <TextBox Grid.Column="1" x:Name="ActivityNormalColorBox" />
+                            <Button Grid.Column="2" x:Name="ActivityNormalColorSwatch" Style="{StaticResource Swatch}" />
                         </Grid>
 
                         <Grid Margin="0,0,0,8">
@@ -343,9 +343,9 @@
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="34" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="Storage read &#x25B2;" />
-                            <TextBox Grid.Column="1" x:Name="DiskReadColorBox" />
-                            <Button Grid.Column="2" x:Name="DiskReadColorSwatch" Style="{StaticResource Swatch}" />
+                            <TextBlock Grid.Column="0" Text="Over 1st" ToolTip="1차 임계값 이상" />
+                            <TextBox Grid.Column="1" x:Name="ActivityElevatedColorBox" />
+                            <Button Grid.Column="2" x:Name="ActivityElevatedColorSwatch" Style="{StaticResource Swatch}" />
                         </Grid>
 
                         <Grid Margin="0,0,0,8">
@@ -354,9 +354,49 @@
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="34" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="Storage write &#x25BC;" />
-                            <TextBox Grid.Column="1" x:Name="DiskWriteColorBox" />
-                            <Button Grid.Column="2" x:Name="DiskWriteColorSwatch" Style="{StaticResource Swatch}" />
+                            <TextBlock Grid.Column="0" Text="Over 2nd" ToolTip="2차 임계값 이상" />
+                            <TextBox Grid.Column="1" x:Name="ActivityHighColorBox" />
+                            <Button Grid.Column="2" x:Name="ActivityHighColorSwatch" Style="{StaticResource Swatch}" />
+                        </Grid>
+
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="110" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="34" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Net 1st KiB/s" ToolTip="네트워크 In+Out 합산 1차 임계값" />
+                            <TextBox Grid.Column="1" x:Name="NetFirstThresholdBox" />
+                        </Grid>
+
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="110" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="34" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Net 2nd KiB/s" />
+                            <TextBox Grid.Column="1" x:Name="NetSecondThresholdBox" />
+                        </Grid>
+
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="110" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="34" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Disk 1st KiB/s" ToolTip="스토리지 Read+Write 합산 1차 임계값" />
+                            <TextBox Grid.Column="1" x:Name="DiskFirstThresholdBox" />
+                        </Grid>
+
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="110" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="34" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Disk 2nd KiB/s" />
+                            <TextBox Grid.Column="1" x:Name="DiskSecondThresholdBox" />
                         </Grid>
 
                     </StackPanel>

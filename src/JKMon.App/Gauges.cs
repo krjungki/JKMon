@@ -226,7 +226,7 @@ internal sealed class CaptionedGauge : IGauge
     private readonly StackPanel _host;
     private readonly IGauge _inner;
 
-    internal CaptionedGauge(IGauge inner, GaugeChrome chrome, string caption, double fontSize)
+    internal CaptionedGauge(IGauge inner, GaugeChrome chrome, string caption, double fontSize, Brush foreground)
     {
         _inner = inner;
 
@@ -236,7 +236,7 @@ internal sealed class CaptionedGauge : IGauge
             FontFamily = chrome.Font,
             FontWeight = FontWeights.Bold,
             FontSize = fontSize,
-            Foreground = chrome.Fill,
+            Foreground = foreground,
             Effect = chrome.Shadow,
             TextAlignment = TextAlignment.Left,
             HorizontalAlignment = HorizontalAlignment.Left,

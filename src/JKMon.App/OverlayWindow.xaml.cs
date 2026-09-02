@@ -76,24 +76,11 @@ public partial class OverlayWindow : Window
             block.Effect = shadow;
         }
 
-        // Each direction owns one colour that covers both its reading and its arrow.
-        var netIn = BrushFor(_settings.EffectiveNetworkInColor, JkMonSettings.DefaultNetworkInColor);
-        var netOut = BrushFor(_settings.EffectiveNetworkOutColor, JkMonSettings.DefaultNetworkOutColor);
-        var diskRead = BrushFor(_settings.EffectiveDiskReadColor, JkMonSettings.DefaultDiskReadColor);
-        var diskWrite = BrushFor(_settings.EffectiveDiskWriteColor, JkMonSettings.DefaultDiskWriteColor);
-
-        NetInValue.Foreground = netIn;
-        NetInArrow.Foreground = netIn;
-        NetOutValue.Foreground = netOut;
-        NetOutArrow.Foreground = netOut;
-        DiskReadValue.Foreground = diskRead;
-        DiskReadArrow.Foreground = diskRead;
-        DiskWriteValue.Foreground = diskWrite;
-        DiskWriteArrow.Foreground = diskWrite;
-
+        // The readings take the colour of their column's activity level, so it is set on every refresh instead.
         ApplyColumnWidths(family, weight);
         RebuildGauges(family, shadow);
         ApplyCustomText();
+        ApplyActivityChrome(family, shadow);
 
         // Column spacing tracks the font so the layout stays balanced at any size.
         var gap = Math.Round(_settings.FontSize * 0.85);
@@ -150,6 +137,50 @@ public partial class OverlayWindow : Window
         Shell.Opacity = conceal ? 0 : 1;
     }
 
+    private void ApplyActivityChrome(FontFamily family, Effect? shadow)
+    {
+        var visible = _settings.ShowActivityBars ? Visibility.Visible : Visibility.Collapsed;
+        var size = Math.Max(JkMonSettings.MinGaugeLabelFontSize, Math.Round(_settings.FontSize * 0.72));
+
+        foreach (var label in (TextBlock[])[NetActivityLabel, DiskActivityLabel])
+        {
+            label.FontFamily = family;
+            label.FontSize = size;
+            label.FontWeight = FontWeights.SemiBold;
+            label.Effect = shadow;
+
+            // A name is not a reading, so it stays the common text colour while the bar carries the activity.
+            label.Foreground = BrushFor(_settings.TextColor, JkMonSettings.DefaultTextColor);
+        }
+
+        foreach (var bar in (Border[])[NetActivityBar, DiskActivityBar])
+        {
+            bar.Effect = shadow;
+        }
+
+        NetActivityRow.Visibility = visible;
+        DiskActivityRow.Visibility = visible;
+    }
+
+    private void ApplyActivity(Border bar, ActivityLevel level, params TextBlock[] readings)
+    {
+        var brush = BrushFor(ColorFor(level), JkMonSettings.DefaultActivityIdleColor);
+        bar.Background = brush;
+
+        foreach (var reading in readings)
+        {
+            reading.Foreground = brush;
+        }
+    }
+
+    private string ColorFor(ActivityLevel level) => level switch
+    {
+        ActivityLevel.Normal => _settings.ActivityNormalColor,
+        ActivityLevel.Elevated => _settings.ActivityElevatedColor,
+        ActivityLevel.High => _settings.ActivityHighColor,
+        _ => _settings.ActivityIdleColor
+    };
+
     public void Update(OverlayModel model)
     {
         _cpuGauge?.Set(model.CpuPercent, model.Cpu);
@@ -167,6 +198,11 @@ public partial class OverlayWindow : Window
         NetOutValue.Text = model.NetworkOut;
         DiskReadValue.Text = model.DiskRead;
         DiskWriteValue.Text = model.DiskWrite;
+
+        ApplyActivity(NetActivityBar, model.NetworkLevel,
+            NetInValue, NetInArrow, NetOutValue, NetOutArrow);
+        ApplyActivity(DiskActivityBar, model.DiskLevel,
+            DiskReadValue, DiskReadArrow, DiskWriteValue, DiskWriteArrow);
 
         // Circles change far less often than the metric text, so only rebuild them when they actually differ.
         if (!_lastCircles.SequenceEqual(model.Circles))
@@ -273,17 +309,18 @@ public partial class OverlayWindow : Window
         var barWidth = Math.Ceiling(height * 0.5);
         var labelSize = _settings.GaugeLabelFontSize;
         var captionSize = _settings.GaugeCaptionFontSize;
+        var captionBrush = BrushFor(_settings.TextColor, JkMonSettings.DefaultTextColor);
 
         _cpuGauge = _settings.CpuGauge == CpuGaugeStyle.Bar
             ? new LabelledGauge(new BarGauge(cpu, barWidth), cpu, labelSize)
-            : Captioned(new NumberGauge(cpu, numberSize, numberWidth), cpu, "CPU", captionSize);
+            : Captioned(new NumberGauge(cpu, numberSize, numberWidth), cpu, "CPU", captionSize, captionBrush);
         CpuHost.Content = _cpuGauge.Element;
 
         _memoryGauge = _settings.MemoryGauge switch
         {
             MemoryGaugeStyle.Bar => new LabelledGauge(new BarGauge(memory, barWidth), memory, labelSize),
             MemoryGaugeStyle.Pie => new LabelledGauge(new PieGauge(memory), memory, labelSize),
-            _ => Captioned(new NumberGauge(memory, numberSize, numberWidth), memory, "Memory", captionSize)
+            _ => Captioned(new NumberGauge(memory, numberSize, numberWidth), memory, "Memory", captionSize, captionBrush)
         };
         MemoryHost.Content = _memoryGauge.Element;
         MemoryHost.Margin = new Thickness(gap, 0, 0, 0);
@@ -294,8 +331,9 @@ public partial class OverlayWindow : Window
         _coreBars = new CoreBarStrip(CoreBars, cpu, Math.Max(5d, Math.Round(_settings.FontSize * 0.55)));
     }
 
-    private static IGauge Captioned(IGauge inner, GaugeChrome chrome, string caption, double fontSize) =>
-        fontSize > 0 ? new CaptionedGauge(inner, chrome, caption, fontSize) : inner;
+    private static IGauge Captioned(
+        IGauge inner, GaugeChrome chrome, string caption, double fontSize, Brush foreground) =>
+        fontSize > 0 ? new CaptionedGauge(inner, chrome, caption, fontSize, foreground) : inner;
 
     private FormattedText Measured(string text, FontFamily family, FontWeight weight, double size)
     {

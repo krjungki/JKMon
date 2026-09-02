@@ -54,7 +54,8 @@ public sealed class MonitorEngine : IDisposable
             }
         }
 
-        return OverlayModelBuilder.Build(metrics, _cachedProviders, Settings.Normalized().ProviderOrder);
+        return OverlayModelBuilder.Build(
+            metrics, _cachedProviders, Settings.Normalized().ProviderOrder, Settings.Normalized().ActivityThresholds);
     }
 
     private async Task<IReadOnlyList<SyncProviderSnapshot>> PollProvidersAsync(CancellationToken cancellationToken)

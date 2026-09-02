@@ -316,98 +316,47 @@ public class JkMonSettingsTests
     }
 
     [Fact]
-    public void Normalized_ReplacesUnparsableIndicatorColorsWithDefaults()
+    public void Normalized_ReplacesUnparsableActivityColorsWithDefaults()
     {
         var settings = new JkMonSettings
         {
-            NetworkInColor = "nope",
-            NetworkOutColor = "#12345",
-            DiskReadColor = "",
-            DiskWriteColor = "#GGHHII"
+            ActivityIdleColor = "nope",
+            ActivityNormalColor = "#12345",
+            ActivityElevatedColor = "",
+            ActivityHighColor = "#GGHHII"
         }.Normalized();
 
-        Assert.Equal(JkMonSettings.DefaultNetworkInColor, settings.NetworkInColor);
-        Assert.Equal(JkMonSettings.DefaultNetworkOutColor, settings.NetworkOutColor);
-        Assert.Equal(JkMonSettings.DefaultDiskReadColor, settings.DiskReadColor);
-        Assert.Equal(JkMonSettings.DefaultDiskWriteColor, settings.DiskWriteColor);
+        Assert.Equal(JkMonSettings.DefaultActivityIdleColor, settings.ActivityIdleColor);
+        Assert.Equal(JkMonSettings.DefaultActivityNormalColor, settings.ActivityNormalColor);
+        Assert.Equal(JkMonSettings.DefaultActivityElevatedColor, settings.ActivityElevatedColor);
+        Assert.Equal(JkMonSettings.DefaultActivityHighColor, settings.ActivityHighColor);
     }
 
     [Fact]
-    public void Normalized_CanonicalisesValidIndicatorColors()
+    public void Normalized_CanonicalisesValidActivityColors()
     {
         var settings = new JkMonSettings
         {
-            NetworkInColor = "f00",
-            DiskWriteColor = "#ff8a5b"
+            ActivityNormalColor = "f00",
+            ActivityHighColor = "#ff8a5b"
         }.Normalized();
 
-        Assert.Equal("#FF0000", settings.NetworkInColor);
-        Assert.Equal("#FF8A5B", settings.DiskWriteColor);
+        Assert.Equal("#FF0000", settings.ActivityNormalColor);
+        Assert.Equal("#FF8A5B", settings.ActivityHighColor);
     }
 
+    /// <summary>The four steps have to be told apart at a glance, so they must not ship as similar colours.</summary>
     [Fact]
-    public void IndicatorColorDefaults_AreDistinct()
+    public void ActivityColorDefaults_AreDistinct()
     {
         string[] defaults =
         [
-            JkMonSettings.DefaultNetworkInColor,
-            JkMonSettings.DefaultNetworkOutColor,
-            JkMonSettings.DefaultDiskReadColor,
-            JkMonSettings.DefaultDiskWriteColor
+            JkMonSettings.DefaultActivityIdleColor,
+            JkMonSettings.DefaultActivityNormalColor,
+            JkMonSettings.DefaultActivityElevatedColor,
+            JkMonSettings.DefaultActivityHighColor
         ];
 
         Assert.Equal(defaults.Length, defaults.Distinct(StringComparer.OrdinalIgnoreCase).Count());
-    }
-
-    [Fact]
-    public void RowsUseDirectionColors_ByDefault()
-    {
-        var settings = new JkMonSettings { TextColor = "#112233" }.Normalized();
-
-        Assert.True(settings.UseDirectionColors);
-        Assert.Equal(JkMonSettings.DefaultNetworkInColor, settings.EffectiveNetworkInColor);
-        Assert.Equal(JkMonSettings.DefaultNetworkOutColor, settings.EffectiveNetworkOutColor);
-        Assert.Equal(JkMonSettings.DefaultDiskReadColor, settings.EffectiveDiskReadColor);
-        Assert.Equal(JkMonSettings.DefaultDiskWriteColor, settings.EffectiveDiskWriteColor);
-    }
-
-    [Fact]
-    public void RowsFallBackToTheTextColor_WhenDirectionColorsAreOff()
-    {
-        var settings = new JkMonSettings
-        {
-            TextColor = "#112233",
-            UseDirectionColors = false
-        }.Normalized();
-
-        Assert.Equal("#112233", settings.EffectiveNetworkInColor);
-        Assert.Equal("#112233", settings.EffectiveNetworkOutColor);
-        Assert.Equal("#112233", settings.EffectiveDiskReadColor);
-        Assert.Equal("#112233", settings.EffectiveDiskWriteColor);
-    }
-
-    [Fact]
-    public void EffectiveRowColors_FollowTheNormalizedTextColor_WhenDirectionColorsAreOff()
-    {
-        var settings = new JkMonSettings { TextColor = "abc", UseDirectionColors = false }.Normalized();
-
-        Assert.Equal("#AABBCC", settings.EffectiveDiskWriteColor);
-    }
-
-    [Fact]
-    public void EffectiveRowColors_AreIndependentPerDirection()
-    {
-        var settings = new JkMonSettings
-        {
-            NetworkInColor = "#111111",
-            NetworkOutColor = "#222222",
-            DiskReadColor = "#333333",
-            DiskWriteColor = "#444444"
-        }.Normalized();
-
-        Assert.Equal("#111111", settings.EffectiveNetworkInColor);
-        Assert.Equal("#222222", settings.EffectiveNetworkOutColor);
-        Assert.Equal("#333333", settings.EffectiveDiskReadColor);
-        Assert.Equal("#444444", settings.EffectiveDiskWriteColor);
     }
 }

@@ -34,6 +34,11 @@ public sealed record OverlayModel
 
     public required string DiskWrite { get; init; }
 
+    /// <summary>Busyness of each throughput row, from the two directions combined.</summary>
+    public required ActivityLevel NetworkLevel { get; init; }
+
+    public required ActivityLevel DiskLevel { get; init; }
+
     public required IReadOnlyList<SyncCircle> Circles { get; init; }
 
     public static OverlayModel Empty { get; } = new()
@@ -47,6 +52,8 @@ public sealed record OverlayModel
         NetworkOut = "0 B/s",
         DiskRead = "0 B/s",
         DiskWrite = "0 B/s",
+        NetworkLevel = ActivityLevel.Idle,
+        DiskLevel = ActivityLevel.Idle,
         Circles = []
     };
 }

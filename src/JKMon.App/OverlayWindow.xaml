@@ -49,6 +49,16 @@
                     <TextBlock x:Name="NetInValue" Text="0 B/s" TextAlignment="Right" />
                     <TextBlock x:Name="NetInArrow" Text="&#x25BC;" />
                 </StackPanel>
+
+                <!-- Bar beside the name rather than above it, so the row reads as one underline plus a caption. -->
+                <Grid x:Name="NetActivityRow" Margin="0,3,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <Border Grid.Column="0" x:Name="NetActivityBar" Height="3" CornerRadius="2" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="1" x:Name="NetActivityLabel" Text="Net" Margin="5,0,0,0" TextWrapping="NoWrap" />
+                </Grid>
             </StackPanel>
 
             <StackPanel x:Name="DiskColumn" Orientation="Vertical" Margin="22,0,0,0" VerticalAlignment="Center">
@@ -60,6 +70,15 @@
                     <TextBlock x:Name="DiskWriteValue" Text="0 B/s" TextAlignment="Right" />
                     <TextBlock x:Name="DiskWriteArrow" Text="&#x25BC;" />
                 </StackPanel>
+
+                <Grid x:Name="DiskActivityRow" Margin="0,3,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <Border Grid.Column="0" x:Name="DiskActivityBar" Height="3" CornerRadius="2" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="1" x:Name="DiskActivityLabel" Text="Disk" Margin="5,0,0,0" TextWrapping="NoWrap" />
+                </Grid>
             </StackPanel>
 
             <StackPanel x:Name="Circles"

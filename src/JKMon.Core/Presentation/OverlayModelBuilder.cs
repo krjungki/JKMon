@@ -15,8 +15,10 @@ public static class OverlayModelBuilder
     public static OverlayModel Build(
         in MetricsSnapshot metrics,
         IEnumerable<SyncProviderSnapshot> providers,
-        IReadOnlyList<string>? order = null)
+        IReadOnlyList<string>? order = null,
+        ActivityThresholds? thresholds = null)
     {
+        var limits = thresholds ?? ActivityThresholds.Default;
         var visible = providers.Where(provider => provider.IsVisible);
 
         // OrderBy is stable, so a provider the order does not mention keeps its position among the others.
@@ -45,6 +47,14 @@ public static class OverlayModelBuilder
             NetworkOut = ByteRateFormatter.Format(metrics.NetworkOutBytesPerSecond),
             DiskRead = ByteRateFormatter.Format(metrics.DiskReadBytesPerSecond),
             DiskWrite = ByteRateFormatter.Format(metrics.DiskWriteBytesPerSecond),
+            NetworkLevel = ActivityLevelMath.Of(
+                metrics.NetworkInBytesPerSecond + metrics.NetworkOutBytesPerSecond,
+                limits.NetworkFirst,
+                limits.NetworkSecond),
+            DiskLevel = ActivityLevelMath.Of(
+                metrics.DiskReadBytesPerSecond + metrics.DiskWriteBytesPerSecond,
+                limits.DiskFirst,
+                limits.DiskSecond),
             Circles = circles
         };
     }
