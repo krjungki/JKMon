@@ -1,5 +1,7 @@
 ﻿using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Interop;
+using System.Windows.Media;
 using System.Windows.Threading;
 using JKMon.App.Interop;
 using JKMon.App.Update;
@@ -47,6 +49,11 @@ public partial class App : System.Windows.Application
     {
         base.OnStartup(e);
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
+
+        // Hardware rendering makes this process hold a Direct3D device and the display driver's user-mode DLLs for
+        // as long as it runs. On a laptop with switchable graphics that is a resident claim on the current adapter,
+        // and it is worth nothing here: the overlay is a per-pixel alpha layered window of text and a few shapes.
+        RenderOptions.ProcessRenderMode = RenderMode.SoftwareOnly;
 
         var arguments = UpdateArguments.Parse(e.Args);
         if (arguments.IsApply)
